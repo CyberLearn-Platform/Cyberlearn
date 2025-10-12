@@ -1,0 +1,118 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap");
+
+body {
+  margin: 0;
+  height: 100vh;
+  background: radial-gradient(circle at center, #0a0a1a, #030312 80%);
+  font-family: "Orbitron", sans-serif;
+  color: #e0e0ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.home-container {
+  text-align: center;
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+.neon-line {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 2px solid #3b00ff;
+  padding: 20px 30px;
+  border-radius: 50px;
+  background: rgba(10, 10, 25, 0.4);
+  box-shadow: 0 0 25px #4000ff80;
+  transition: 0.3s ease;
+}
+
+.neon-line:hover {
+  box-shadow: 0 0 40px #6200ffcc;
+  transform: scale(1.03);
+}
+
+.question {
+  white-space: nowrap;
+  color: #b9b8ff;
+  font-size: 1.2rem;
+  text-shadow: 0 0 10px #4c00ff;
+}
+
+.neon-line input {
+  flex: 1;
+  padding: 10px 15px;
+  background: transparent;
+  border: 2px solid #4c00ff;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: 0.3s;
+}
+
+.neon-line input:focus {
+  border-color: #00ffff;
+  box-shadow: 0 0 15px #00ffffcc;
+}
+
+.neon-line button {
+  background: linear-gradient(90deg, #4c00ff, #00ffff);
+  border: none;
+  padding: 10px 25px;
+  border-radius: 30px;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 0 15px #4c00ff80;
+}
+
+.neon-line button:hover {
+  background: linear-gradient(90deg, #00ffff, #4c00ff);
+  box-shadow: 0 0 25px #00ffffaa;
+  transform: scale(1.05);
+}
+
+.result {
+  margin-top: 25px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  animation: neonPulse 1.5s infinite;
+}
+
+.success {
+  color: #00ffcc;
+  text-shadow: 0 0 10px #00ffcc;
+}
+
+.error {
+  color: #ff4c4c;
+  text-shadow: 0 0 10px #ff0000;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes neonPulse {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 20px currentColor;
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 5px currentColor;
+  }
+}

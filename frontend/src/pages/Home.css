@@ -1,52 +1,228 @@
-.home {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #0f172a;
-  color: white;
+/* ------------------------------ */
+/* 🌍 Reset global                */
+/* ------------------------------ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
   font-family: "Poppins", sans-serif;
 }
 
-.question {
-  margin-bottom: 20px;
-  font-size: 1.4em;
-  text-align: center;
-}
-
-.form {
+/* ------------------------------ */
+/* 🔷 Global page style           */
+/* ------------------------------ */
+.home-page {
+  width: 100%;
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ------------------------------ */
+/* 🟣 Hero section                 */
+/* ------------------------------ */
+.hero-section {
+  text-align: center;
+  padding: 140px 10% 60px;
+  animation: fadeIn 1s ease-in-out;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hero-section h1 {
+  font-size: 3.2rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.hero-section h1 span {
+  text-shadow: 0 0 25px rgba(108, 99, 255, 0.8);
+}
+
+.hero-section p {
+  font-size: 1.15rem;
+  margin-top: 15px;
+  line-height: 1.6;
+}
+
+/* ------------------------------ */
+/* 🧩 Cards section               */
+/* ------------------------------ */
+.cards-section {
+  margin-top: 60px;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
+  gap: 40px;
+  padding: 0 10% 100px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.input {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  width: 250px;
-  margin-right: 10px;
-  font-size: 1em;
-}
-
-.btn {
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 8px;
+.quest-card {
+  border-radius: 18px;
+  padding: 40px 35px;
+  width: 300px;
+  text-align: center;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 25px rgba(108, 99, 255, 0.15);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn:hover {
-  background-color: #1e40af;
+.quest-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(108, 99, 255, 0.15) 0%,
+    transparent 70%
+  );
+  transform: scale(0);
+  transition: transform 0.4s ease;
+  z-index: 0;
 }
 
-.result {
-  margin-top: 20px;
-  font-size: 1.3em;
-  font-weight: bold;
+.quest-card:hover::before {
+  transform: scale(1);
+}
+
+.quest-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 40px rgba(108, 99, 255, 0.3);
+}
+
+.quest-card h2 {
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+  z-index: 1;
+  position: relative;
+}
+
+.quest-card p {
+  font-size: 0.95rem;
+  z-index: 1;
+  position: relative;
+}
+
+.quest-card.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ------------------------------ */
+/* 🌙 Dark mode                   */
+/* ------------------------------ */
+body.dark-mode {
+  background: linear-gradient(135deg, #0b0f27 0%, #161d3d 100%);
+  color: #e6e9ff;
+}
+
+body.dark-mode .hero-section h1 {
+  color: #ffffff;
+}
+
+body.dark-mode .hero-section h1 span {
+  color: #6c63ff;
+  text-shadow: 0 0 25px rgba(108, 99, 255, 0.8);
+}
+
+body.dark-mode .hero-section p {
+  color: #c9c9d9;
+}
+
+body.dark-mode .quest-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(108, 99, 255, 0.25);
+  color: #d1d1e6;
+}
+
+body.dark-mode .quest-card:hover {
+  box-shadow: 0 0 40px rgba(108, 99, 255, 0.4);
+}
+
+/* ------------------------------ */
+/* ☀️ Light mode                  */
+/* ------------------------------ */
+body.light-mode {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  color: #2d3748;
+}
+
+body.light-mode .hero-section h1 {
+  color: #1a202c;
+}
+
+body.light-mode .hero-section h1 span {
+  color: #6c63ff;
+  text-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
+}
+
+body.light-mode .hero-section p {
+  color: #4a5568;
+}
+
+body.light-mode .quest-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(108, 99, 255, 0.15);
+  color: #2d3748;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .quest-card:hover {
+  box-shadow: 0 8px 25px rgba(108, 99, 255, 0.15);
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-5px);
+}
+
+body.light-mode .quest-card.disabled {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(248, 249, 250, 0.7);
+  color: #718096;
+}
+
+/* ------------------------------ */
+/* ✨ Animations                   */
+/* ------------------------------ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ------------------------------ */
+/* 📱 Responsive design            */
+/* ------------------------------ */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 120px 8% 40px;
+  }
+
+  .hero-section h1 {
+    font-size: 2.2rem;
+  }
+
+  .cards-section {
+    padding: 0 5% 80px;
+  }
+
+  .quest-card {
+    width: 90%;
+  }
 }

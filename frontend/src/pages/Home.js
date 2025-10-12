@@ -1,57 +1,41 @@
-import React, { useEffect, useState } from "react";
-import "./Home.css"; // 👈 import the CSS file
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import NavBar from "../components/NavBar";
+import "./Home.css";
 
 function Home() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [result, setResult] = useState("");
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:5000/question")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.question) setQuestion(data.question);
-      })
-      .catch((err) => console.error("Error fetching question:", err));
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const res = await fetch("http://127.0.0.1:5000/check-answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answer }),
-    });
-
-    const data = await res.json();
-    setResult(data.result === "correct" ? "✅ Correct!" : "❌ Wrong answer.");
-  };
+  const navigate = useNavigate();
 
   return (
-    <div className="home">
-      <h1>🧠 CyberLearn Platform</h1>
+    <div className="home-page">
+      <NavBar />
 
-      {question ? (
-        <>
-          <h2 className="question">{question}</h2>
-          <form onSubmit={handleSubmit} className="form">
-            <input
-              type="text"
-              placeholder="Enter your answer..."
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="input"
-            />
-            <button type="submit" className="btn">
-              Submit
-            </button>
-          </form>
-          {result && <p className="result">{result}</p>}
-        </>
-      ) : (
-        <p>Loading question...</p>
-      )}
+      <header className="hero-section">
+        <h1>
+          Welcome to <span>CyberQuest</span>
+        </h1>
+        <p>
+          Master cybersecurity skills through interactive missions, labs, and
+          real-world simulations.
+        </p>
+      </header>
+
+      <section className="cards-section">
+        <div className="quest-card" onClick={() => navigate("/quests")}>
+          <h2>⚡ Quests</h2>
+          <p>Start your interactive cybersecurity challenges.</p>
+        </div>
+
+        <div className="quest-card disabled">
+          <h2>🔐 Labs</h2>
+          <p>Hands-on labs — Coming soon.</p>
+        </div>
+
+        <div className="quest-card disabled">
+          <h2>📘 Learning Paths</h2>
+          <p>Guided paths to grow your hacking skills.</p>
+        </div>
+      </section>
     </div>
   );
 }

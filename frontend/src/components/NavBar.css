@@ -1,0 +1,139 @@
+/* ------------------------------ */
+/* 🌍 Reset global                */
+/* ------------------------------ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  transition: background 0.3s, color 0.3s;
+  font-family: "Poppins", sans-serif;
+}
+
+/* ------------------------------ */
+/* 🔷 Navbar container             */
+/* ------------------------------ */
+.navbar {
+  position: fixed; /* 👈 reste collée en haut et couvre toute la largeur */
+  top: 0;
+  left: 0;
+  width: 100vw; /* 👈 largeur plein écran (viewport width) */
+  height: 70px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 60px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ------------------------------ */
+/* 🧩 Logo                        */
+/* ------------------------------ */
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.cyber {
+  color: var(--accent);
+}
+
+.learn {
+  color: var(--text);
+}
+
+/* ------------------------------ */
+/* 🔗 Links                       */
+/* ------------------------------ */
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  width: 0%;
+  height: 2px;
+  bottom: -5px;
+  left: 0;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* ------------------------------ */
+/* 🌗 Toggle Switch               */
+/* ------------------------------ */
+.toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+.toggle {
+  width: 50px;
+  height: 26px;
+  background: var(--toggle-bg);
+  border-radius: 50px;
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.toggle .circle {
+  width: 20px;
+  height: 20px;
+  background: var(--toggle-circle);
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  transition: all 0.3s ease;
+}
+
+/* Hide checkbox input */
+#theme-toggle {
+  display: none;
+}
+
+#theme-toggle:checked + .toggle .circle {
+  transform: translateX(24px);
+}
+
+/* ------------------------------ */
+/* ☀️ Light mode variables        */
+/* ------------------------------ */
+:root {
+  --bg: #ffffff;
+  --text: #222222;
+  --accent: #4b6cff;
+  --toggle-bg: #ddd;
+  --toggle-circle: #ffffff;
+}
+
+/* ------------------------------ */
+/* 🌙 Dark mode                   */
+/* ------------------------------ */
+body.dark-mode {
+  --bg: #0a0a0a;
+  --text: #f4f4f4;
+  --accent: #4b6cff;
+  --toggle-bg: #333;
+  --toggle-circle: #4b6cff;
+  background-color: #0a0a0a;
+}
