@@ -1,60 +1,46 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-import mysql.connector
+import json
+import os
 
 app = Flask(__name__)
-CORS(app)  # allow frontend requests
+CORS(app)
 
-# --- MySQL Configuration ---
-db_config = {
-    "host": "localhost",
-    "user": "root",          # your MySQL username
-    "password": "root",          # your MySQL password (if any)
-    "database": "cyberlearn" # the database you created
-}
+# ✅ Path to the JSON file inside backend/quests/
+QUEST_FILE = os.path.join(os.path.dirname(__file__), "quests", "quest1.json")
 
-def get_connection():
-    return mysql.connector.connect(**db_config)
-
-
-# --- Get the question ---
+# --- Load the question from JSON ---
 @app.route("/question", methods=["GET"])
 def get_question():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, question FROM questions LIMIT 1")
-    row = cursor.fetchone()
-    conn.close()
+    if not os.path.exists(QUEST_FILE):
+        return jsonify({"error": "Question file not found"}), 404
 
-    if row:
-        return jsonify({"id": row[0], "question": row[1]})
-    else:
-        return jsonify({"error": "No question found"}), 404
+    with open(QUEST_FILE, "r", encoding="utf-8") as f:
+        quest = json.load(f)
 
+    return jsonify({
+        "id": quest["id"],
+        "question": quest["question"]
+    })
 
-# --- Check the user’s answer ---
+# --- Check the user's answer ---
 @app.route("/check-answer", methods=["POST"])
 def check_answer():
+    if not os.path.exists(QUEST_FILE):
+        return jsonify({"error": "Question file not found"}), 404
+
     data = request.get_json()
     user_answer = data.get("answer", "").strip().lower()
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT answer FROM questions LIMIT 1")
-    row = cursor.fetchone()
-    conn.close()
+    with open(QUEST_FILE, "r", encoding="utf-8") as f:
+        quest = json.load(f)
 
-    if not row:
-        return jsonify({"error": "No question found"}), 400
-
-    correct_answer = row[0].strip().lower()
+    correct_answer = quest["answer"].strip().lower()
 
     if user_answer == correct_answer:
-        return jsonify({"result": "correct"})
+        return jsonify({"result": "correct", "message": "✅ Correct! Well done!"})
     else:
-        return jsonify({"result": "wrong"})
-
+        return jsonify({"result": "wrong", "message": "❌ Wrong answer, try again."})
 
 if __name__ == "__main__":
-    app.run(debug=True)
- 
+    app.run(debug=True, port=5000)
