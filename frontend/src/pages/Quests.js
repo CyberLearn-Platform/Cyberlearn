@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./Quests.css";
+import NavBar from "../components/NavBar";
 
 function Quests() {
   const [question, setQuestion] = useState("");
@@ -47,33 +48,38 @@ function Quests() {
   };
 
   return (
-    <div className="home-container">
-      <div className="neon-line">
-        <span className="question">{question || "⚙️ Loading question..."}</span>
+    <>
+      <NavBar />
+      <div className="home-container">
+        <div className="neon-line">
+          <span className="question">
+            {question || "⚙️ Loading question..."}
+          </span>
 
-        <input
-          type="text"
-          placeholder="Type your answer..."
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          className="neon-input"
-        />
+          <input
+            type="text"
+            placeholder="Type your answer..."
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            className="neon-input"
+          />
 
-        <button onClick={handleSubmit} className="neon-btn">
-          Submit
-        </button>
-      </div>
-
-      {result && (
-        <div
-          className={`result ${
-            result.includes("Correct") ? "success" : "error"
-          }`}
-        >
-          {result}
+          <button onClick={handleSubmit} className="neon-btn">
+            Submit
+          </button>
         </div>
-      )}
-    </div>
+
+        {result && (
+          <div
+            className={`result ${
+              result.includes("Correct") ? "success" : "error"
+            }`}
+          >
+            {result}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
