@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 import "./login.css";
 
-// 2FA-enabled Login component for Cyberquest
-// - Uses your Flask endpoints at http://localhost:5000
-// - Supports: login -> (if 2FA enabled) prompt OTP -> verify OTP (/2fa/login-verify)
-// - Supports: 2FA setup (call /2fa/setup to get provisioning_uri, display QR, then /2fa/confirm)
-
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -361,7 +356,7 @@ export default function Login() {
         </div>
 
         <div className="page-footer">
-          Copyright © 2017–2025 Cyberquest. <a href="#">User Agreement</a>,{" "}
+          Copyright © Cyberquest. <a href="#">User Agreement</a>,{" "}
           <a href="#">Privacy Notice</a>
         </div>
       </div>

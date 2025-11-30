@@ -6,7 +6,6 @@ import os
 import tempfile
 import pyotp
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
