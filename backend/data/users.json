@@ -1,8 +1,0 @@
-[
-  {
-    "email": "admin@cyberquest.com",
-    "password": "scrypt:32768:8:1$3JKv5QrHsF1CPkti$c8de7d78799464f082cdb88765f84c7762fb5bfc47b06e634bfcebb402ef60702137a6b187f92a8f6090b283365887b97f57ec848113d029dfc5fcd267cd4f2e",
-    "2fa_secret": "WF3HJSA32YYWB3UIFZ4BLKQKIZCTOLWE",
-    "2fa_enabled": true
-  }
-]

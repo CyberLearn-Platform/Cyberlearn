@@ -1,0 +1,10 @@
+[
+  { "id": 1, "question": "Que signifie OSINT ?", "answer": "open source intelligence|osint", "explanation": "Collecte d'informations à partir de sources publiquement disponibles." },
+  { "id": 2, "question": "Quelle option Nmap effectue un scan furtif TCP ?", "answer": "-sS|syn scan|stealth scan", "explanation": "L'option -sS effectue un scan SYN furtif sans établir de connexion complète." },
+  { "id": 3, "question": "Qu'est-ce qu'un test en boîte noire ?", "answer": "black box|boite noire|test sans connaissance interne", "explanation": "Test où l'auditeur n'a aucune connaissance de l'architecture interne du système." },
+  { "id": 4, "question": "Que doit contenir un contrat de pentest ?", "answer": "perimetre|scope|autorisations", "explanation": "Le périmètre, les limitations et les autorisations doivent être clairement définis." },
+  { "id": 5, "question": "Qu'est-ce que l'énumération en pentest ?", "answer": "enumeration|extraction informations detaillees", "explanation": "Phase d'extraction d'informations détaillées sur les services et ressources identifiés." },
+  { "id": 6, "question": "Que signifie CVE ?", "answer": "common vulnerabilities and exposures|cve", "explanation": "Base de données publique des vulnérabilités de sécurité informatique connues." },
+  { "id": 7, "question": "Qu'est-ce que Metasploit ?", "answer": "metasploit|framework exploitation", "explanation": "Framework open-source pour développer et exécuter des exploits contre des machines distantes." },
+  { "id": 8, "question": "Que signifie RCE ?", "answer": "remote code execution|rce|execution code distance", "explanation": "Vulnérabilité permettant à un attaquant d'exécuter du code arbitraire sur un système distant." }
+]

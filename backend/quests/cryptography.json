@@ -1,0 +1,10 @@
+[
+  { "id": 1, "question": "Que signifie AES ?", "answer": "advanced encryption standard|aes", "explanation": "AES (Advanced Encryption Standard) est l'algorithme de chiffrement symétrique standard actuel." },
+  { "id": 2, "question": "Quelle est la différence entre hachage et chiffrement ?", "answer": "hachage irreversible|hashing irreversible|hachage pas reversible", "explanation": "Le hachage est irréversible et crée une empreinte, le chiffrement est réversible avec la clé." },
+  { "id": 3, "question": "Que signifie PKI ?", "answer": "public key infrastructure|pki|infrastructure cle publique", "explanation": "Infrastructure à clé publique pour gérer les certificats et clés de chiffrement asymétrique." },
+  { "id": 4, "question": "Quel algorithme de hachage est recommandé aujourd'hui ?", "answer": "sha-256|sha256|sha-2", "explanation": "SHA-256 fait partie de SHA-2 et est actuellement sûr, contrairement à MD5 et SHA-1." },
+  { "id": 5, "question": "Qu'est-ce qu'un salt en cryptographie ?", "answer": "donnee aleatoire|salt|sel cryptographique", "explanation": "Données aléatoires ajoutées avant hachage pour empêcher les attaques par dictionnaire." },
+  { "id": 6, "question": "Que signifie RSA ?", "answer": "rivest shamir adleman|rsa", "explanation": "Algorithme de chiffrement asymétrique nommé d'après ses créateurs Rivest, Shamir et Adleman." },
+  { "id": 7, "question": "Qu'est-ce que la cryptographie elliptique ?", "answer": "ecc|elliptic curve cryptography|cryptographie courbe elliptique", "explanation": "Système de chiffrement basé sur les courbes elliptiques, plus efficace que RSA." },
+  { "id": 8, "question": "Que signifie PFS ?", "answer": "perfect forward secrecy|pfs|confidentialite persistante", "explanation": "Propriété garantissant que la compromission d'une clé n'affecte pas les sessions précédentes." }
+]

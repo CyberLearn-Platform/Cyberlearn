@@ -1,0 +1,232 @@
+/* Barre de progression XP moderne */
+.xp-progress-container {
+  background: rgba(30, 41, 59, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-progress-container.animating {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.xp-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.level-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.current-level {
+  font-size: 1.2rem;
+  font-weight: bold;
+  background: linear-gradient(45deg, #3b82f6, #1e40af);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.level-title {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.xp-info {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.current-xp {
+  color: #10b981;
+}
+
+.xp-separator {
+  color: #64748b;
+}
+
+.max-xp {
+  color: #94a3b8;
+}
+
+/* Barre de progression */
+.xp-progress-bar-container {
+  position: relative;
+}
+
+.xp-progress-bar {
+  height: 20px;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.xp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, 
+    #10b981 0%, 
+    #34d399 50%, 
+    #6ee7b7 100%);
+  border-radius: 10px;
+  position: relative;
+  min-width: 0;
+  box-shadow: 
+    0 0 15px rgba(16, 185, 129, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.xp-progress-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.3) 50%, 
+    transparent 100%);
+  animation: shine 2s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+/* Particules XP */
+.xp-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.xp-particle {
+  position: absolute;
+  top: -10px;
+  font-size: 12px;
+  color: #fbbf24;
+  animation: particleFloat 2s ease-out forwards;
+  z-index: 10;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0) scale(0);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-10px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Labels de progression */
+.xp-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.progress-percentage {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.next-level-info {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* Indicateur de gain XP */
+.xp-gain-indicator {
+  position: absolute;
+  top: -15px;
+  right: 20px;
+  z-index: 20;
+  animation: xpGainFloat 2s ease-out forwards;
+}
+
+.xp-gain-amount {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.xp-gain-amount.positive {
+  background: linear-gradient(45deg, #10b981, #059669);
+  color: white;
+  border: 2px solid rgba(16, 185, 129, 0.6);
+}
+
+.xp-gain-amount.negative {
+  background: linear-gradient(45deg, #ef4444, #dc2626);
+  color: white;
+  border: 2px solid rgba(239, 68, 68, 0.6);
+}
+
+@keyframes xpGainFloat {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-5px) scale(1.1);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-10px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .xp-progress-container {
+    padding: 1rem;
+  }
+  
+  .xp-progress-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .xp-progress-labels {
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+  }
+}

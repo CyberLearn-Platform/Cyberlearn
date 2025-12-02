@@ -1,0 +1,10 @@
+[
+  { "id": 1, "question": "Que signifie XSS en sécurité web ?", "answer": "cross site scripting|xss|cross-site scripting", "explanation": "XSS (Cross-Site Scripting) permet d'injecter du code JavaScript malveillant dans des pages web." },
+  { "id": 2, "question": "Quelle est la meilleure défense contre l'injection SQL ?", "answer": "requetes preparees|prepared statements|requêtes préparées", "explanation": "Les requêtes préparées empêchent l'injection SQL en séparant le code SQL des données." },
+  { "id": 3, "question": "Que signifie CSRF ?", "answer": "cross site request forgery|csrf|cross-site request forgery", "explanation": "CSRF permet d'exécuter des actions non autorisées au nom d'un utilisateur authentifié." },
+  { "id": 4, "question": "Quel header HTTP aide à prévenir les attaques XSS ?", "answer": "content security policy|csp|x-xss-protection", "explanation": "Content Security Policy (CSP) limite les sources autorisées pour le contenu exécutable." },
+  { "id": 5, "question": "Qu'est-ce que l'OWASP Top 10 ?", "answer": "owasp top 10|top 10 owasp|liste vulnérabilités web", "explanation": "Liste des 10 vulnérabilités web les plus critiques maintenue par l'OWASP." },
+  { "id": 6, "question": "Que signifie HTTPS ?", "answer": "http secure|hypertext transfer protocol secure|https", "explanation": "HTTPS chiffre les communications entre le navigateur et le serveur web via SSL/TLS." },
+  { "id": 7, "question": "Qu'est-ce qu'un WAF ?", "answer": "web application firewall|waf|pare-feu applicatif", "explanation": "WAF filtre le trafic HTTP pour protéger les applications web des attaques courantes." },
+  { "id": 8, "question": "Que signifie SSL/TLS ?", "answer": "secure socket layer|transport layer security|ssl|tls", "explanation": "Protocoles de chiffrement pour sécuriser les communications réseau sur Internet." }
+]

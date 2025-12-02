@@ -1,0 +1,10 @@
+[
+  { "id": 1, "question": "Que signifie IoC en cybersécurité ?", "answer": "indicators of compromise|ioc|indicateurs de compromission", "explanation": "Artefacts qui indiquent qu'un système a été potentiellement compromis." },
+  { "id": 2, "question": "Combien de phases compte le cycle NIST de réponse aux incidents ?", "answer": "4|quatre", "explanation": "4 phases : Préparation, Détection & Analyse, Confinement/Éradication/Récupération, Leçons apprises." },
+  { "id": 3, "question": "Qu'est-ce qu'un SIEM ?", "answer": "security information and event management|siem", "explanation": "Système qui collecte et analyse les logs de sécurité pour détecter les incidents." },
+  { "id": 4, "question": "Que signifie 'Chain of Custody' ?", "answer": "chaine de possession|chain of custody|tracabilite preuves", "explanation": "Processus qui assure la traçabilité et l'intégrité des preuves numériques." },
+  { "id": 5, "question": "Quelle est la première priorité lors d'un incident ?", "answer": "preservation preuves|confinement|documentation", "explanation": "Préserver les preuves et contenir l'incident pour éviter sa propagation." },
+  { "id": 6, "question": "Que signifie CSIRT ?", "answer": "computer security incident response team|csirt|equipe reponse incidents", "explanation": "Équipe spécialisée dans la gestion et la réponse aux incidents de sécurité informatique." },
+  { "id": 7, "question": "Qu'est-ce qu'un honeypot ?", "answer": "honeypot|pot de miel|leurre securite", "explanation": "Système ou ressource informatique volontairement vulnérable pour attirer et étudier les attaquants." },
+  { "id": 8, "question": "Que signifie DFIR ?", "answer": "digital forensics and incident response|dfir|forensic incident response", "explanation": "Domaine combinant l'investigation numérique et la réponse aux incidents de sécurité." }
+]

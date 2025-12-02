@@ -1,0 +1,22 @@
+[
+  { "id": 1, "question": "Qu'est-ce qu'une adresse IP ?", "answer": "adresse ip|ip address|internet protocol address", "explanation": "Adresse numérique identifiant un appareil sur un réseau." },
+  { "id": 2, "question": "Que signifie 'SQL' dans SQL injection ?", "answer": "structured query language|sql", "explanation": "SQL = Structured Query Language, utilisé pour interroger des bases de données." },
+  { "id": 3, "question": "Quel dispositif protège le réseau en filtrant le trafic ?", "answer": "firewall|pare-feu", "explanation": "Un pare-feu (firewall) filtre les paquets et protège le réseau." },
+  { "id": 4, "question": "Qu'est-ce que le phishing (hameçonnage) ?", "answer": "phishing|hameçonnage", "explanation": "Technique d'attaque qui vise à tromper l'utilisateur pour voler des données." },
+  { "id": 5, "question": "Quel protocole chiffre les communications web (https) ?", "answer": "tls|ssl|https", "explanation": "TLS (anciennement SSL) chiffre les connexions HTTP pour former HTTPS." },
+  { "id": 6, "question": "Que signifie 'XSS' en sécurité web ?", "answer": "cross site scripting|xss", "explanation": "Attaque injectant du code JavaScript malveillant dans une page web." },
+  { "id": 7, "question": "Nom d'un outil pour analyser paquets réseau ?", "answer": "wireshark", "explanation": "Wireshark est un analyseur de paquets réseau très utilisé." },
+  { "id": 8, "question": "Que veut dire 'DDoS' ?", "answer": "distributed denial of service|ddos", "explanation": "Attaque visant à rendre un service indisponible via de nombreuses requêtes." },
+  { "id": 9, "question": "Quel port par défaut pour HTTP ?", "answer": "80|port 80", "explanation": "HTTP utilise le port 80 par défaut." },
+  { "id": 10, "question": "Quel port par défaut pour HTTPS ?", "answer": "443|port 443", "explanation": "HTTPS utilise le port 443 par défaut." },
+  { "id": 11, "question": "Qu'est-ce qu'un VPN ?", "answer": "virtual private network|vpn|reseau prive virtuel", "explanation": "VPN crée un tunnel chiffré pour sécuriser la connexion réseau." },
+  { "id": 12, "question": "Quel est le principe de la 'phishing' par SMS ?", "answer": "smishing|sms phishing|smishing", "explanation": "Smishing est le phishing via SMS pour tromper la victime." },
+  { "id": 13, "question": "Quelle technique vole les mots de passe via keylogger ?", "answer": "keylogger|enregistreur de frappe", "explanation": "Keylogger enregistre les touches pressées pour voler des identifiants." },
+  { "id": 14, "question": "Qu'est-ce qu'une 'backdoor' ?", "answer": "backdoor|porte dérobée|porte derobee", "explanation": "Accès caché laissé par un attaquant pour revenir sur un système." },
+  { "id": 15, "question": "Nom d'une méthode d'authentification forte supplémentaire ?", "answer": "mfa|2fa|authentification a deux facteurs|multi factor authentication", "explanation": "MFA/2FA ajoute un facteur (SMS, app, clé) à la connexion." },
+  { "id": 16, "question": "Que signifie 'pentest' ?", "answer": "penetration test|pentest|test d'intrusion", "explanation": "Test d'intrusion visant à trouver les vulnérabilités d'un système." },
+  { "id": 17, "question": "Qu'est-ce qu'un 'hash' (ex: SHA-256) ?", "answer": "hash|empreinte|hachage", "explanation": "Fonction qui transforme des données en une empreinte fixe, irréversible." },
+  { "id": 18, "question": "Quel est le but d'un 'salt' pour les mots de passe ?", "answer": "salt|sel", "explanation": "Le 'salt' ajoute des données uniques pour sécuriser le hachage des mots de passe." },
+  { "id": 19, "question": "Qu'est-ce qu'une vulnérabilité 'zero-day' ?", "answer": "zero day|zero-day|0day", "explanation": "Vulnérabilité inconnue du public et exploitée avant correctif." },
+  { "id": 20, "question": "Que signifie 'MITM' en attaque réseau ?", "answer": "man in the middle|mitm|homme au milieu", "explanation": "Attaquant intercepte et modifie la communication entre deux parties." }
+]

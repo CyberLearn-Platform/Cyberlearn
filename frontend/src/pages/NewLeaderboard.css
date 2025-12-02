@@ -1,0 +1,441 @@
+/* Design moderne pour le leaderboard */
+.leaderboard-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding-top: 100px; /* Espacement pour éviter la navbar */
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Header */
+.leaderboard-header {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.1);
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(45deg, #3b82f6, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-content p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
+}
+
+.user-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(45deg, #3b82f6, #1e40af);
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  font-weight: bold;
+}
+
+.rank-text {
+  opacity: 0.9;
+}
+
+.rank-number {
+  font-size: 1.2rem;
+  color: #fbbf24;
+}
+
+/* Podium */
+.podium-section {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 1rem;
+  margin: 3rem 0;
+  align-items: end;
+}
+
+.podium-place {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 15px;
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.podium-place:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(59, 130, 246, 0.2);
+}
+
+.place-1 {
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.2), rgba(255, 193, 7, 0.1));
+  border-color: #ffd700;
+  min-height: 280px;
+}
+
+.place-2 {
+  background: linear-gradient(45deg, rgba(192, 192, 192, 0.2), rgba(169, 169, 169, 0.1));
+  border-color: #c0c0c0;
+  min-height: 240px;
+}
+
+.place-3 {
+  background: linear-gradient(45deg, rgba(205, 127, 50, 0.2), rgba(184, 115, 51, 0.1));
+  border-color: #cd7f32;
+  min-height: 200px;
+}
+
+.podium-rank {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #3b82f6, #1e40af);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+}
+
+.username {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.level-badge {
+  background: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+}
+
+.xp-amount {
+  font-size: 1.1rem;
+  color: #10b981;
+  font-weight: bold;
+}
+
+.user-title {
+  font-size: 0.9rem;
+  color: #60a5fa;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+/* Table */
+.leaderboard-table {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px 120px 150px;
+  background: linear-gradient(45deg, #3b82f6, #1e40af);
+  padding: 1rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px 120px 150px;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  transition: all 0.3s ease;
+  align-items: center;
+}
+
+.table-row:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.table-row.current-user {
+  background: linear-gradient(45deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  margin: 0.5rem;
+  border-radius: 10px;
+}
+
+.rank-gold {
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.1), rgba(255, 193, 7, 0.05));
+}
+
+.rank-silver {
+  background: linear-gradient(45deg, rgba(192, 192, 192, 0.1), rgba(169, 169, 169, 0.05));
+}
+
+.rank-bronze {
+  background: linear-gradient(45deg, rgba(205, 127, 50, 0.1), rgba(184, 115, 51, 0.05));
+}
+
+.rank-top10 {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.table-cell {
+  display: flex;
+  align-items: center;
+}
+
+.rank-col {
+  gap: 0.5rem;
+}
+
+.rank-icon {
+  font-size: 1.2rem;
+}
+
+.rank-number {
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+.user-col {
+  gap: 1rem;
+}
+
+.user-col .user-avatar {
+  width: 50px;
+  height: 50px;
+  font-size: 1.2rem;
+}
+
+.user-details .username {
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.you-badge {
+  background: #10b981;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.user-details .user-title {
+  font-size: 0.8rem;
+  color: #60a5fa;
+  margin-top: 0.2rem;
+}
+
+.level-display {
+  text-align: center;
+}
+
+.level-number {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #3b82f6;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.level-progress {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.level-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.xp-display {
+  text-align: center;
+}
+
+.xp-display .xp-amount {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #10b981;
+  display: block;
+}
+
+.xp-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stats {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stat-icon {
+  font-size: 1.2rem;
+  filter: grayscale(30%) opacity(0.8);
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+/* Info section */
+.leaderboard-info {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  text-align: center;
+}
+
+.leaderboard-info h3 {
+  margin-bottom: 2rem;
+  color: #3b82f6;
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.tip-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 15px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.tip-card:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.tip-icon {
+  font-size: 2rem;
+  filter: grayscale(20%) opacity(0.9);
+  background: rgba(30, 41, 59, 0.6);
+  padding: 0.8rem;
+  border-radius: 50%;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.tip-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #60a5fa;
+}
+
+.tip-content p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .table-header,
+  .table-row {
+    grid-template-columns: 80px 1fr 100px 100px 120px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .leaderboard-container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .podium-section {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .podium-place {
+    min-height: auto !important;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .table-cell {
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .tips-grid {
+    grid-template-columns: 1fr;
+  }
+}
