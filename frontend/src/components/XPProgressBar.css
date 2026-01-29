@@ -49,18 +49,22 @@
   gap: 0.25rem;
   font-size: 1rem;
   font-weight: bold;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .current-xp {
-  color: #10b981;
+  color: #ffffff !important;
 }
 
 .xp-separator {
-  color: #64748b;
+  color: #ffffff !important;
 }
 
 .max-xp {
-  color: #94a3b8;
+  color: #ffffff !important;
 }
 
 /* Barre de progression */
@@ -81,15 +85,16 @@
 .xp-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, 
-    #10b981 0%, 
-    #34d399 50%, 
-    #6ee7b7 100%);
+    #3b82f6 0%, 
+    #60a5fa 50%, 
+    #93c5fd 100%);
   border-radius: 10px;
   position: relative;
-  min-width: 0;
+  min-width: 2%;
   box-shadow: 
-    0 0 15px rgba(16, 185, 129, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    0 0 20px rgba(59, 130, 246, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  transition: width 0.3s ease;
 }
 
 .xp-progress-shine {

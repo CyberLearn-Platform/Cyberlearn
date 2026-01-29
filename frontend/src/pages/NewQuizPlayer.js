@@ -478,7 +478,7 @@ function NewQuizPlayer() {
               <div className="progress-fill" style={{ width: `${progress}%` }}></div>
             </div>
             
-            {/* Barre de progression XP */}
+            {/* Barre de progression XP synchronisée */}
             {currentUserData && (
               <XPProgressBar 
                 currentXp={currentUserData.totalXp}

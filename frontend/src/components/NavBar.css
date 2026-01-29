@@ -481,6 +481,43 @@ body.light-mode .mobile-menu-btn span {
   z-index: 999;
 }
 
+/* Barre de progression XP globale */
+.global-xp-bar-container {
+  position: fixed;
+  top: 70px; /* Juste en dessous de la navbar */
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: var(--background-secondary, rgba(23, 25, 35, 0.95));
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.global-xp-bar-container .xp-progress-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Ajustement pour le mode clair */
+.light-mode .global-xp-bar-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .mobile-menu-btn {

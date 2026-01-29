@@ -1,14 +1,25 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import json
 import os
 from datetime import datetime
 import hashlib
 import secrets
 import hashlib
+from game_rooms import room_manager
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+app.config['SECRET_KEY'] = 'cyberforge-secret-key-2024'
+# CORS pour permettre les connexions depuis n'importe quel PC du réseau local
+CORS(app, origins="*", supports_credentials=True)
+
+# Initialiser SocketIO avec CORS (sans eventlet pour Python 3.13)
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*",  # Accepter toutes les origines sur le réseau local
+    async_mode='threading'
+)
 
 # Simulated database (in production, use a real database)
 users_db = {}
@@ -1310,17 +1321,206 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 
+# ===================================
+# WEBSOCKET EVENTS FOR MULTIPLAYER
+# ===================================
+
+@socketio.on('connect')
+def handle_connect():
+    """Gère la connexion d'un client"""
+    print(f'Client connected: {request.sid}')
+    emit('connected', {'sid': request.sid})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Gère la déconnexion d'un client"""
+    print(f'Client disconnected: {request.sid}')
+    other_player = room_manager.leave_room(request.sid)
+    if other_player:
+        emit('opponent_left', {}, room=other_player)
+
+@socketio.on('create_room')
+def handle_create_room(data):
+    """Crée une nouvelle salle de jeu"""
+    player_name = data.get('player_name', 'Joueur')
+    room = room_manager.create_room(request.sid, player_name)
+    join_room(room.room_code)
+    emit('room_created', {
+        'room_code': room.room_code,
+        'player_name': player_name,
+        'message': f'Salle {room.room_code} créée avec succès!'
+    })
+    print(f'Room created: {room.room_code} by {player_name}')
+
+@socketio.on('join_room')
+def handle_join_room(data):
+    """Rejoint une salle existante"""
+    room_code = data.get('room_code', '').upper()
+    player_name = data.get('player_name', 'Joueur')
+    room = room_manager.join_room(room_code, request.sid, player_name)
+    if room:
+        join_room(room_code)
+        # Envoyer au joueur qui rejoint : ses infos + le créateur
+        emit('room_joined', {
+            'room_code': room_code,
+            'player_name': player_name,
+            'opponent_name': room.creator_name,
+            'message': f'Vous avez rejoint la salle {room_code}!'
+        })
+        # Envoyer au créateur : infos du nouveau joueur
+        emit('opponent_joined', {
+            'opponent_name': player_name,
+            'message': f'{player_name} a rejoint votre salle!'
+        }, room=room.creator_sid)
+        print(f'{player_name} joined room {room_code}')
+    else:
+        emit('error', {'message': 'Salle introuvable ou complète'})
+
+@socketio.on('start_game')
+def handle_start_game(data):
+    """Démarre la partie"""
+    room = room_manager.get_player_room(request.sid)
+    if room and room.start_game():
+        # Envoyer les données complètes de la partie au créateur
+        emit('game_started', {
+            'message': 'La partie commence!',
+            'current_turn': room.creator_sid,
+            'your_turn': True,
+            'player_name': room.creator_name,
+            'opponent_name': room.opponent_name,
+            'player_sid': room.creator_sid,
+            'opponent_sid': room.opponent_sid
+        }, room=room.creator_sid)
+        
+        # Envoyer les données complètes de la partie à l'adversaire
+        emit('game_started', {
+            'message': 'La partie commence!',
+            'current_turn': room.creator_sid,
+            'your_turn': False,
+            'player_name': room.opponent_name,
+            'opponent_name': room.creator_name,
+            'player_sid': room.opponent_sid,
+            'opponent_sid': room.creator_sid
+        }, room=room.opponent_sid)
+        
+        print(f'Game started in room {room.room_code}: {room.creator_name} vs {room.opponent_name}')
+    else:
+        emit('error', {'message': 'Impossible de démarrer la partie'})
+
+@socketio.on('player_answer')
+def handle_player_answer(data):
+    """Gère la réponse d'un joueur"""
+    room = room_manager.get_player_room(request.sid)
+    if not room:
+        emit('error', {'message': 'Vous n\'êtes pas dans une salle'})
+        return
+    if not room.is_player_turn(request.sid):
+        emit('error', {'message': 'Ce n\'est pas votre tour!'})
+        return
+    
+    is_correct = data.get('is_correct', False)
+    damage = data.get('damage', 0)
+    attacker_new_health = data.get('new_health', 100)
+    
+    print(f'[PLAYER_ANSWER] Attacker: {request.sid}, Damage: {damage}, Correct: {is_correct}')
+    
+    # Mettre à jour la santé de l'attaquant
+    room.update_player_state(request.sid, {'health': attacker_new_health})
+    
+    opponent_sid = room.get_opponent_sid(request.sid)
+    
+    if is_correct and opponent_sid:
+        # Calculer la nouvelle santé de la victime
+        opponent_state = room.get_player_state(opponent_sid)
+        victim_current_health = opponent_state.get('health', 100)
+        victim_new_health = max(0, victim_current_health - damage)
+        
+        print(f'[HEALTH_UPDATE] Victim health: {victim_current_health} -> {victim_new_health}')
+        
+        # Mettre à jour la santé de la victime dans le state
+        room.update_player_state(opponent_sid, {'health': victim_new_health})
+        
+        # Envoyer à la victime : les dégâts + la santé de l'attaquant
+        print(f'[EMIT] Sending opponent_attack to {opponent_sid}')
+        emit('opponent_attack', {
+            'damage': damage,
+            'attacker_health': attacker_new_health,
+            'your_new_health': victim_new_health,
+            'message': 'Votre adversaire vous attaque!'
+        }, room=opponent_sid)
+        
+        # Envoyer à l'attaquant : confirmation avec la santé de la victime
+        print(f'[EMIT] Sending attack_confirmed to {request.sid}')
+        emit('attack_confirmed', {
+            'victim_new_health': victim_new_health,
+            'your_health': attacker_new_health
+        }, room=request.sid)
+        
+        # Vérifier la victoire/défaite
+        if victim_new_health <= 0:
+            attacker_name = room.creator_name if request.sid == room.creator_sid else room.opponent_name
+            victim_name = room.opponent_name if request.sid == room.creator_sid else room.creator_name
+            
+            print(f'[GAME_OVER] {attacker_name} wins!')
+            
+            # Envoyer la victoire à l'attaquant
+            emit('game_ended', {
+                'winner': True,
+                'message': f'Victoire ! Vous avez vaincu {victim_name} !'
+            }, room=request.sid)
+            
+            # Envoyer la défaite à la victime
+            emit('game_ended', {
+                'winner': False,
+                'message': f'Défaite ! {attacker_name} vous a vaincu !'
+            }, room=opponent_sid)
+            
+            return  # Ne pas changer de tour si le jeu est terminé
+    
+    # Changer de tour seulement si le jeu continue
+    room.switch_turn()
+    print(f'[TURN] Turn changed to {room.current_turn}')
+    emit('turn_changed', {'current_turn': room.current_turn, 'your_turn': False}, room=request.sid)
+    emit('turn_changed', {'current_turn': room.current_turn, 'your_turn': True}, room=opponent_sid)
+
+@socketio.on('update_health')
+def handle_update_health(data):
+    """Met à jour la santé d'un joueur"""
+    room = room_manager.get_player_room(request.sid)
+    if room:
+        new_health = data.get('health', 100)
+        room.update_player_state(request.sid, {'health': new_health})
+        opponent_sid = room.get_opponent_sid(request.sid)
+        if opponent_sid:
+            emit('opponent_health_update', {'opponent_health': new_health}, room=opponent_sid)
+
+@socketio.on('game_over')
+def handle_game_over(data):
+    """Gère la fin de partie"""
+    room = room_manager.get_player_room(request.sid)
+    if room:
+        winner = data.get('winner')
+        emit('game_ended', {'winner': winner, 'message': 'La partie est terminée!'}, room=room.room_code)
+        room_manager.delete_room(room.room_code)
+
+@socketio.on('leave_room')
+def handle_leave_room_event():
+    """Quitte la salle actuelle"""
+    room = room_manager.get_player_room(request.sid)
+    if room:
+        leave_room(room.room_code)
+        opponent_sid = room_manager.leave_room(request.sid)
+        if opponent_sid:
+            emit('opponent_left', {'message': 'Votre adversaire a quitté la partie'}, room=opponent_sid)
+        emit('left_room', {'message': 'Vous avez quitté la salle'})
+
+
 if __name__ == '__main__':
-    print("🚀 Starting CyberForge Backend...")
+    print("🚀 Starting CyberForge Backend with WebSocket...")
     print("📂 Quest files location:", os.path.join(os.path.dirname(__file__), 'quests'))
     print("🌐 CORS enabled for: http://localhost:3000")
     print("💾 Using in-memory database (for development only)")
     print("🔐 Simple authentication enabled")
+    print("🎮 Multiplayer mode enabled with Socket.IO")
     print("✅ Backend ready!")
-    app.run(debug=True, host='127.0.0.1', port=5000)
-    app.run(
-        debug=True,
-        host='0.0.0.0',  # Allow connections from other machines
-        port=5000,
-        threaded=True
-    )
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

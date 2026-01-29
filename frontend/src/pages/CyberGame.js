@@ -1,29 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { useGameRoom } from '../hooks/useSocket';
 import './CyberGame.css';
 
 const CyberGame = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   
+  // WebSocket pour le mode en ligne
+  const {
+    socket,
+    isConnected,
+    roomCode,
+    opponent,
+    gameStarted: onlineGameStarted,
+    isMyTurn,
+    error: socketError,
+    playerName: onlinePlayerName,
+    opponentName: onlineOpponentName,
+    notification,
+    createRoom,
+    joinRoom,
+    startGame: startOnlineGame,
+    sendAnswer,
+    updateHealth,
+    leaveRoom
+  } = useGameRoom();
+  
   // Game state
+  const [gameMode, setGameMode] = useState(null); // 'local' ou 'online'
   const [gameStarted, setGameStarted] = useState(false);
   const [currentTurn, setCurrentTurn] = useState('player');
   const [battleLog, setBattleLog] = useState([]);
   
-  // Player state
-  const [player, setPlayer] = useState({
-    name: 'CyberDefender',
-    health: 100,
-    maxHealth: 100,
-    attack: 20,
-    defense: 10,
-    level: 1,
-    experience: 0,
-    experienceToNext: 200,
-    mana: 50,
-    maxMana: 50
+  // États pour le mode en ligne
+  const [showRoomInterface, setShowRoomInterface] = useState(false);
+  const [playerNameInput, setPlayerNameInput] = useState('');
+  const [roomCodeInput, setRoomCodeInput] = useState('');
+  const [roomAction, setRoomAction] = useState(null); // 'create' ou 'join'
+  
+  // Player state - Synchronisé avec le système d'XP des Quiz
+  const [player, setPlayer] = useState(() => {
+    // Utiliser le même localStorage que les Quiz
+    const userExperience = JSON.parse(localStorage.getItem('userExperience') || '{}');
+    const level = userExperience.level || 1;
+    const totalXp = userExperience.totalXp || 0;
+    const xpToNextLevel = userExperience.xpToNextLevel || 100;
+    
+    // Calculer les stats basées sur le niveau (même formule que dans le jeu)
+    const maxHealth = 100 + (level - 1) * 15;
+    const maxMana = 50 + (level - 1) * 10;
+    const attack = 20 + (level - 1) * 3;
+    const defense = 10 + (level - 1) * 2;
+    
+    return {
+      name: 'CyberDefender',
+      health: maxHealth,
+      maxHealth: maxHealth,
+      attack: attack,
+      defense: defense,
+      level: level,
+      experience: totalXp,
+      experienceToNext: xpToNextLevel,
+      mana: maxMana,
+      maxMana: maxMana
+    };
   });
   
   // Animation states
@@ -93,6 +135,155 @@ const CyberGame = () => {
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  
+  // Bot AI state (pour mode local)
+  const [botThinking, setBotThinking] = useState(false);
+  const [botDifficulty, setBotDifficulty] = useState('medium'); // easy, medium, hard
+  
+  // Synchroniser avec le système d'XP global des Quiz (uniquement en mode local)
+  useEffect(() => {
+    // Ne pas sauvegarder pendant le mode PvP pour ne pas écraser le vrai niveau
+    if (gameMode === 'online' && gameStarted) {
+      return; // Ne rien faire en mode PvP
+    }
+    
+    const userExperience = {
+      level: player.level,
+      totalXp: player.experience,
+      xpToNextLevel: player.experienceToNext,
+      currentXp: 0 // XP dans le niveau actuel
+    };
+    localStorage.setItem('userExperience', JSON.stringify(userExperience));
+    
+    // Déclencher un événement pour synchroniser avec les autres pages
+    window.dispatchEvent(new CustomEvent('levelUpdate', { detail: userExperience }));
+  }, [player.level, player.experience, player.experienceToNext, gameMode, gameStarted]);
+  
+  // Écouter les événements WebSocket pour le mode online
+  useEffect(() => {
+    if (gameMode !== 'online' || !onlineGameStarted || !socket) return;
+    
+    const handleOpponentAttack = (data) => {
+      console.log('🔥 OPPONENT ATTACK RECEIVED:', data);
+      const damage = data.damage;
+      const serverPlayerHealth = data.your_new_health; // Santé calculée par le serveur
+      
+      setPlayer(prev => {
+        console.log('🛡️ Updating player health from', prev.health, 'to', serverPlayerHealth);
+        return { ...prev, health: serverPlayerHealth };
+      });
+      
+      setEnemy(prev => {
+        const newEnemyHealth = data.attacker_health;
+        console.log('👾 Updating enemy health to', newEnemyHealth);
+        return { ...prev, health: newEnemyHealth };
+      });
+      
+      setBattleLog(prev => [...prev, `💥 ${onlineOpponentName} vous attaque et inflige ${damage} dégâts !`]);
+      
+      // Animation de dégâts reçus
+      setPlayerAttacking(true);
+      setTimeout(() => setPlayerAttacking(false), 400);
+      
+      if (serverPlayerHealth <= 0) {
+        setBattleLog(prev => [...prev, `💀 Défaite ! ${onlineOpponentName} vous a vaincu !`]);
+        setShowDefeat(true);
+        setTimeout(() => setShowDefeat(false), 3000);
+        setTimeout(() => {
+          setGameStarted(false);
+          leaveRoom();
+          navigate('/');
+        }, 3000);
+      }
+    };
+    
+    const handleOpponentHealthUpdate = (data) => {
+      setEnemy(prev => ({ ...prev, health: data.opponent_health }));
+    };
+    
+    const handleAttackConfirmed = (data) => {
+      console.log('✅ ATTACK CONFIRMED:', data);
+      // Mettre à jour la santé de l'ennemi avec la valeur du serveur
+      setEnemy(prev => {
+        console.log('👾 Enemy health confirmed:', data.victim_new_health);
+        return { ...prev, health: data.victim_new_health };
+      });
+    };
+    
+    const handleTurnChanged = (data) => {
+      if (data.your_turn) {
+        setBattleLog(prev => [...prev, "✨ C'est votre tour !"]);
+        setCurrentQuestion(null);
+      } else {
+        setBattleLog(prev => [...prev, `⏳ Tour de ${onlineOpponentName}...`]);
+      }
+    };
+    
+    const handleGameEnded = (data) => {
+      console.log('🏁 GAME ENDED:', data);
+      setBattleLog(prev => [...prev, data.message]);
+      
+      if (data.winner) {
+        // Victoire
+        setShowVictory(true);
+        setTimeout(() => setShowVictory(false), 3000);
+      } else {
+        // Défaite
+        setShowDefeat(true);
+        setTimeout(() => setShowDefeat(false), 3000);
+      }
+      
+      setGameStarted(false);
+      setTimeout(() => {
+        leaveRoom();
+        navigate('/');
+      }, 4000);
+    };
+    
+    // Écouter les événements
+    socket.on('opponent_attack', handleOpponentAttack);
+    socket.on('opponent_health_update', handleOpponentHealthUpdate);
+    socket.on('attack_confirmed', handleAttackConfirmed);
+    socket.on('turn_changed', handleTurnChanged);
+    socket.on('game_ended', handleGameEnded);
+    
+    return () => {
+      socket.off('opponent_attack', handleOpponentAttack);
+      socket.off('opponent_health_update', handleOpponentHealthUpdate);
+      socket.off('attack_confirmed', handleAttackConfirmed);
+      socket.off('turn_changed', handleTurnChanged);
+      socket.off('game_ended', handleGameEnded);
+    };
+    
+  }, [gameMode, onlineGameStarted, player.health, onlineOpponentName, leaveRoom, navigate, socket]);
+  
+  // Synchroniser le démarrage du jeu en mode online
+  useEffect(() => {
+    if (gameMode === 'online' && onlineGameStarted && !gameStarted) {
+      // Mettre à jour les noms des joueurs depuis le serveur
+      if (onlinePlayerName) {
+        setPlayer(prev => ({ ...prev, name: onlinePlayerName }));
+      }
+      if (onlineOpponentName) {
+        setEnemy(prev => ({ ...prev, name: onlineOpponentName }));
+      }
+      setGameStarted(true);
+      startBattle();
+    }
+  }, [onlineGameStarted, gameMode, onlinePlayerName, onlineOpponentName]);
+  
+  // Gérer la déconnexion de l'adversaire pendant la partie
+  useEffect(() => {
+    if (gameMode === 'online' && gameStarted && !opponent && !onlineGameStarted) {
+      // L'adversaire a quitté pendant la partie
+      setBattleLog(prev => [...prev, "⚠️ Votre adversaire a quitté la partie !"]);
+      setTimeout(() => {
+        setGameStarted(false);
+        leaveRoom();
+        navigate('/');
+      }, 2000);
+    }
+  }, [opponent, gameMode, gameStarted, onlineGameStarted, leaveRoom, navigate]);
   
   // Questions database
   const questionsDB = {
@@ -236,6 +427,46 @@ const CyberGame = () => {
 
   const startBattle = () => {
     setGameStarted(true);
+    
+    // Mode en ligne : Combat PvP (pas d'arène ni d'ennemi IA)
+    if (gameMode === 'online') {
+      setBattleLog([
+        "🎮 Combat PvP - Le duel commence !",
+        `⚔️ ${onlinePlayerName} VS ${onlineOpponentName}`,
+        "🎯 Bonne chance !",
+        "⚖️ Mode équilibré : Stats égales pour tous les joueurs"
+      ]);
+      
+      // Initialiser les stats pour le PvP - Stats par défaut égales pour tous
+      // On garde le niveau du joueur pour l'affichage, mais les stats de combat sont égales
+      setPlayer(prev => ({ 
+        ...prev,
+        name: onlinePlayerName,
+        health: 100,
+        maxHealth: 100,
+        attack: 20,
+        defense: 10,
+        mana: 50,
+        maxMana: 50
+        // Le niveau reste inchangé pour l'affichage de la progression
+      }));
+      
+      // L'adversaire commence avec les mêmes stats (équilibré)
+      setEnemy({
+        name: onlineOpponentName,
+        health: 100,
+        maxHealth: 100,
+        attack: 20,
+        defense: 10,
+        type: 'player',
+        difficulty: 'pvp'
+      });
+      
+      setCurrentTurn('player');
+      return;
+    }
+    
+    // Mode local : Combat contre IA avec arènes
     const currentArenaInfo = arenaTypes[arenaType];
     setBattleLog([
       "🎮 Le combat commence !",
@@ -245,19 +476,13 @@ const CyberGame = () => {
     ]);
     setCurrentTurn('player');
     
-    // Reset stats pour nouvelle partie
+    // Reset stats pour nouvelle partie (CONSERVER le niveau et les stats sauvegardés)
     setPlayer(prev => ({ 
       ...prev, 
-      health: prev.maxHealth,
-      mana: prev.maxMana,
-      // Reset level and stats for new game
-      level: 1,
-      experience: 0,
-      experienceToNext: 200,
-      attack: 20,
-      defense: 10,
-      maxHealth: 100,
-      maxMana: 50
+      health: prev.maxHealth, // Restore health to max
+      mana: prev.maxMana // Restore mana to max
+      // NE PAS réinitialiser level, experience, attack, defense, etc.
+      // Le joueur garde sa progression entre les parties !
     }));
     setCurrentArena(1);
     setArenaEnemiesDefeated(0);
@@ -279,8 +504,16 @@ const CyberGame = () => {
     startTimer(5, () => {
       if (!showResult) {
         setBattleLog(prev => [...prev, "⏰ Temps écoulé ! Votre attaque échoue !"]);
-        startTimer(3, enemyAttack);
         setCurrentQuestion(null);
+        
+        // En mode online, envoyer une attaque ratée (0 dégâts) pour passer le tour
+        if (gameMode === 'online' && onlineGameStarted) {
+          console.log('⏰ TIMEOUT: Sending failed attack to switch turn');
+          sendAnswer(false, 0, player.health);
+        } else if (gameMode === 'local') {
+          // En mode local, l'ennemi attaque
+          startTimer(3, enemyAttack);
+        }
       }
     });
   };
@@ -304,6 +537,12 @@ const CyberGame = () => {
 
   const handleAnswerSubmit = () => {
     if (!currentQuestion || selectedChoice === '') return;
+    
+    // En mode online, vérifier si c'est notre tour
+    if (gameMode === 'online' && onlineGameStarted && !isMyTurn) {
+      setBattleLog(prev => [...prev, "❌ Ce n'est pas votre tour !"]);
+      return;
+    }
     
     // Stop timer
     setTimerActive(false);
@@ -331,9 +570,29 @@ const CyberGame = () => {
       }
       
       damage = Math.max(1, damage);
-      const newEnemyHealth = Math.max(0, enemy.health - damage);
       
-      setEnemy(prev => ({ ...prev, health: newEnemyHealth }));
+      // En mode online, NE PAS mettre à jour la santé localement
+      // Le serveur va envoyer attack_confirmed avec la vraie valeur
+      if (gameMode === 'online' && onlineGameStarted) {
+        console.log('📤 SENDING ATTACK:', { damage, playerHealth: player.health });
+        sendAnswer(true, damage, player.health);
+        
+        // Enemy shake animation on hit (damage received)
+        setTimeout(() => {
+          setEnemyAttacking(true);
+          setTimeout(() => setEnemyAttacking(false), 400);
+        }, 300);
+      } else {
+        // Mode local : calcul normal
+        const newEnemyHealth = Math.max(0, enemy.health - damage);
+        setEnemy(prev => ({ ...prev, health: newEnemyHealth }));
+        
+        // Enemy shake animation on hit (damage received)
+        setTimeout(() => {
+          setEnemyAttacking(true);
+          setTimeout(() => setEnemyAttacking(false), 400);
+        }, 300);
+      }
       
       // Gain mana on successful attack
       const manaGain = 10;
@@ -342,12 +601,18 @@ const CyberGame = () => {
         mana: Math.min(prev.maxMana, prev.mana + manaGain)
       }));
       
-      // Enemy shake animation on hit (damage received)
-      setTimeout(() => {
-        setEnemyAttacking(true);
-        setTimeout(() => setEnemyAttacking(false), 400);
-      }, 300);
+      // En mode online, ne pas gérer la victoire ici (géré par le serveur)
+      if (gameMode === 'online' && onlineGameStarted) {
+        // Fermer la question après l'attaque
+        startTimer(5, () => {
+          setCurrentQuestion(null);
+          setShowResult(false);
+        });
+        return; // Sortir de la fonction
+      }
       
+      // Mode local : vérifier la victoire
+      const newEnemyHealth = enemy.health; // Utiliser la santé actuelle de l'ennemi
       if (newEnemyHealth <= 0) {
         const defeatedCount = arenaEnemiesDefeated + 1;
         setArenaEnemiesDefeated(defeatedCount);
@@ -364,7 +629,7 @@ const CyberGame = () => {
           `💰 +${totalExp} XP (${defeatedCount}/${totalArenaEnemies})`
         ]);
         
-        // Update player with experience and check for level up
+        // Update player with experience and check for level up (utilise formule Quiz)
         setPlayer(prev => {
           const newExp = prev.experience + totalExp;
           let newLevel = prev.level;
@@ -374,15 +639,22 @@ const CyberGame = () => {
           let newAttack = prev.attack;
           let newDefense = prev.defense;
           
+          // Utiliser la même formule que les Quiz : 100 * (1.5 ^ (level - 1))
+          const calculateXpForLevel = (level) => Math.floor(100 * Math.pow(1.5, level - 1));
+          
           // Check for level up
-          if (newExp >= prev.experienceToNext) {
-            newLevel = prev.level + 1;
-            newExpToNext = newLevel * 250; // Scaling experience requirement
+          let leveledUp = false;
+          while (newExp >= newExpToNext) {
+            newLevel = newLevel + 1;
+            newExpToNext = calculateXpForLevel(newLevel);
             newMaxHealth = 100 + (newLevel - 1) * 15; // +15 HP per level
             newMaxMana = 50 + (newLevel - 1) * 10; // +10 Mana per level
             newAttack = 20 + (newLevel - 1) * 3; // +3 Attack per level
             newDefense = 10 + (newLevel - 1) * 2; // +2 Defense per level
-            
+            leveledUp = true;
+          }
+          
+          if (leveledUp) {
             // Trigger level up animation
             setShowLevelUp(true);
             setTimeout(() => setShowLevelUp(false), 3000);
@@ -420,7 +692,13 @@ const CyberGame = () => {
           }, 2000);
         }
       } else {
-        startTimer(5, enemyAttack); // Reduced time for more difficulty
+        // En mode local UNIQUEMENT, le bot joue après un délai
+        if (gameMode === 'local' && enemy.health > 0) {
+          setTimeout(() => {
+            handleBotTurn();
+          }, 2000);
+        }
+        // En mode online, on ne fait RIEN (le joueur attend son tour)
       }
     } else {
       setBattleLog(prev => [...prev, "❌ Mauvaise réponse ! Votre attaque échoue !"]);
@@ -429,13 +707,95 @@ const CyberGame = () => {
         ...prev, 
         mana: Math.max(0, prev.mana - 5)
       }));
-      startTimer(5, enemyAttack);
+      
+      // En mode local UNIQUEMENT, le bot joue après un délai
+      if (gameMode === 'local') {
+        setTimeout(() => {
+          handleBotTurn();
+        }, 2000);
+      }
+      // En mode online, on ne fait RIEN (le serveur gère les tours)
     }
     
     startTimer(5, () => {
       setCurrentQuestion(null);
       setShowResult(false);
     });
+  };
+
+  // Fonction IA du Bot pour mode local
+  const handleBotTurn = () => {
+    if (enemy.health <= 0 || player.health <= 0) return;
+    
+    setBotThinking(true);
+    setBattleLog(prev => [...prev, `🤖 ${enemy.name} réfléchit à sa stratégie...`]);
+    
+    // Simuler un temps de réflexion (1-3 secondes)
+    const thinkingTime = 1000 + Math.random() * 2000;
+    
+    setTimeout(() => {
+      setBotThinking(false);
+      
+      // Calculer la probabilité de bonne réponse selon la difficulté
+      let correctChance;
+      switch (botDifficulty) {
+        case 'easy':
+          correctChance = 0.4; // 40% de chance
+          break;
+        case 'medium':
+          correctChance = 0.6; // 60% de chance
+          break;
+        case 'hard':
+          correctChance = 0.8; // 80% de chance
+          break;
+        default:
+          correctChance = 0.6;
+      }
+      
+      // Le bot répond
+      const botCorrect = Math.random() < correctChance;
+      
+      if (botCorrect) {
+        // Bot attaque le joueur
+        let baseDamage = enemy.attack;
+        let criticalHit = Math.random() < 0.15; // 15% critique pour le bot
+        let damage = baseDamage - player.defense + Math.floor(Math.random() * 8);
+        
+        if (criticalHit) {
+          damage = Math.floor(damage * 1.5);
+          setBattleLog(prev => [...prev, `⚡ ${enemy.name} COUP CRITIQUE ! ${damage} dégâts !`]);
+        } else {
+          setBattleLog(prev => [...prev, `✅ ${enemy.name} répond correctement et vous attaque ! ${damage} dégâts !`]);
+        }
+        
+        damage = Math.max(1, damage);
+        const newPlayerHealth = Math.max(0, player.health - damage);
+        
+        // Animation d'attaque du bot
+        setEnemyAttacking(true);
+        setTimeout(() => setEnemyAttacking(false), 600);
+        
+        setTimeout(() => {
+          setPlayerAttacking(true);
+          setTimeout(() => setPlayerAttacking(false), 400);
+        }, 300);
+        
+        setPlayer(prev => ({ ...prev, health: newPlayerHealth }));
+        
+        if (newPlayerHealth <= 0) {
+          setBattleLog(prev => [...prev, "💀 Défaite ! Le Bot vous a vaincu !"]);
+          setShowDefeat(true);
+          setTimeout(() => setShowDefeat(false), 3000);
+          setTimeout(() => {
+            setGameStarted(false);
+            setGameMode(null);
+          }, 2000);
+        }
+      } else {
+        // Bot rate sa réponse
+        setBattleLog(prev => [...prev, `❌ ${enemy.name} se trompe ! Son attaque échoue !`]);
+      }
+    }, thinkingTime);
   };
 
   const enemyAttack = () => {
@@ -484,15 +844,29 @@ const CyberGame = () => {
     startTimer(5, () => {
       if (!showResult) {
         setBattleLog(prev => [...prev, "⏰ Temps écoulé ! Votre soin échoue !"]);
-        startTimer(3, enemyAttack);
         setCurrentQuestion(null);
         setIsHealingQuestion(false);
+        
+        // En mode online, envoyer une action ratée (0 dégâts) pour passer le tour
+        if (gameMode === 'online' && onlineGameStarted) {
+          console.log('⏰ TIMEOUT: Sending failed heal to switch turn');
+          sendAnswer(false, 0, player.health);
+        } else if (gameMode === 'local') {
+          // En mode local, l'ennemi attaque
+          startTimer(3, enemyAttack);
+        }
       }
     });
   };
 
   const handleHealSubmit = () => {
     if (!currentQuestion || selectedChoice === '') return;
+    
+    // En mode online, vérifier si c'est notre tour
+    if (gameMode === 'online' && onlineGameStarted && !isMyTurn) {
+      setBattleLog(prev => [...prev, "❌ Ce n'est pas votre tour !"]);
+      return;
+    }
     
     // Stop timer
     setTimerActive(false);
@@ -513,6 +887,11 @@ const CyberGame = () => {
           mana: prev.mana - 20 // Cost mana for healing
         }));
         setBattleLog(prev => [...prev, `💚 Bonne réponse ! Vous récupérez ${healAmount} PV et dépensez 20 mana !`]);
+        
+        // En mode online, mettre à jour la santé via WebSocket
+        if (gameMode === 'online' && onlineGameStarted) {
+          updateHealth(newHealth);
+        }
       } else {
         setBattleLog(prev => [...prev, "🔵 Bonne réponse mais pas assez de mana ! (20 requis)"]);
       }
@@ -525,8 +904,10 @@ const CyberGame = () => {
       }));
     }
     
-    // Enemy gets a turn after healing attempt
-    startTimer(3, enemyAttack);
+    // En mode local, enemy attaque après
+    if (gameMode === 'local') {
+      startTimer(3, enemyAttack);
+    }
     
     startTimer(5, () => {
       setCurrentQuestion(null);
@@ -611,8 +992,9 @@ const CyberGame = () => {
     setPlayer(prev => ({ 
       ...prev, 
       experience: prev.experience + totalReward,
-      mana: Math.min(prev.maxMana, prev.mana + manaReward),
-      health: prev.maxHealth // Full heal between arenas
+      mana: Math.min(prev.maxMana, prev.mana + manaReward)
+      // Ne PAS restaurer la santé automatiquement entre les arènes
+      // Le joueur doit utiliser "Se soigner" pour récupérer des PV
     }));
     
     // Advance to next arena
@@ -628,6 +1010,16 @@ const CyberGame = () => {
 
   return (
     <div className="cyber-game">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`notification-toast ${notification.type}`}>
+          {notification.type === 'success' && '✅ '}
+          {notification.type === 'warning' && '⚠️ '}
+          {notification.type === 'error' && '❌ '}
+          {notification.message}
+        </div>
+      )}
+      
       <div className="game-header">
         <button onClick={() => {
           setGameStarted(false);
@@ -709,6 +1101,14 @@ const CyberGame = () => {
                         <span className="stat-label">❤️ PV Max</span>
                         <span className="stat-value">{player.maxHealth}</span>
                       </div>
+                      <div className="stat-item">
+                        <span className="stat-label">⚡ Mana Max</span>
+                        <span className="stat-value">{player.maxMana}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">📊 XP Total</span>
+                        <span className="stat-value">{player.experience}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -717,9 +1117,280 @@ const CyberGame = () => {
           </>
         )}
         
-        {!gameStarted && (
+        {!gameStarted && !gameMode && (
+          <div className="game-mode-selection">
+            <h1 className="mode-title">🎮 CyberGame</h1>
+            <p className="mode-subtitle">Choisissez votre mode de jeu</p>
+            
+            <div className="mode-cards">
+              <div className="mode-card local" onClick={() => setGameMode('local')}>
+                <div className="mode-icon">🤖</div>
+                <h3>Mode Local</h3>
+                <p>Affrontez un Bot IA intelligent</p>
+                <ul className="mode-features">
+                  <li>✅ Jouez hors ligne</li>
+                  <li>✅ IA adaptative</li>
+                  <li>✅ 3 niveaux de difficulté</li>
+                  <li>✅ Progression sauvegardée</li>
+                </ul>
+                <button className="mode-btn">
+                  <span>Jouer en Local</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+              </div>
+              
+              <div className="mode-card online" onClick={() => {
+                setGameMode('online');
+                setShowRoomInterface(true);
+              }}>
+                <div className="mode-icon">🌐</div>
+                <h3>Mode En Ligne</h3>
+                <p>Affrontez d'autres joueurs en temps réel</p>
+                <ul className="mode-features">
+                  <li>⚔️ PvP en temps réel</li>
+                  <li>🏆 Salles privées avec code</li>
+                  <li>💬 Combat synchronisé</li>
+                  <li>🎁 Système de tours</li>
+                </ul>
+                <button className="mode-btn online">
+                  <span>Jouer en Ligne</span>
+                  <span className="btn-arrow">→</span>
+                </button>
+              </div>
+            </div>
+            
+            <button className="back-btn" onClick={() => navigate('/')}>
+              ← Retour à l'accueil
+            </button>
+          </div>
+        )}
+        
+        {/* Interface de salle pour le mode en ligne */}
+        {!gameStarted && gameMode === 'online' && showRoomInterface && !roomCode && (
+          <div className="online-room-interface">
+            <h1 className="room-title">🌐 Mode En Ligne</h1>
+            <p className="room-subtitle">
+              {isConnected ? '✅ Connecté au serveur' : '⏳ Connexion au serveur...'}
+            </p>
+
+            {socketError && (
+              <div className="error-message">
+                ❌ {socketError}
+              </div>
+            )}
+
+            {!roomAction && (
+              <div className="room-actions">
+                <div className="room-action-card" onClick={() => setRoomAction('create')}>
+                  <div className="action-icon">🎮</div>
+                  <h3>Créer une Salle</h3>
+                  <p>Créez une salle privée et partagez le code avec un ami</p>
+                  <button className="action-btn">
+                    Créer une salle →
+                  </button>
+                </div>
+
+                <div className="room-action-card" onClick={() => setRoomAction('join')}>
+                  <div className="action-icon">🔗</div>
+                  <h3>Rejoindre une Salle</h3>
+                  <p>Entrez le code d'une salle existante pour rejoindre la partie</p>
+                  <button className="action-btn">
+                    Rejoindre une salle →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {roomAction === 'create' && (
+              <div className="room-form">
+                <h2>Créer une Salle</h2>
+                <div className="form-group">
+                  <label>Votre Pseudo</label>
+                  <input
+                    type="text"
+                    placeholder="Entrez votre pseudo"
+                    value={playerNameInput}
+                    onChange={(e) => setPlayerNameInput(e.target.value)}
+                    maxLength={20}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button 
+                    className="btn-create"
+                    onClick={() => {
+                      if (playerNameInput.trim()) {
+                        createRoom(playerNameInput);
+                      }
+                    }}
+                    disabled={!playerNameInput.trim() || !isConnected}
+                  >
+                    🎮 Créer la Salle
+                  </button>
+                  <button 
+                    className="btn-back"
+                    onClick={() => {
+                      setRoomAction(null);
+                      setPlayerNameInput('');
+                    }}
+                  >
+                    ← Retour
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {roomAction === 'join' && (
+              <div className="room-form">
+                <h2>Rejoindre une Salle</h2>
+                <div className="form-group">
+                  <label>Votre Pseudo</label>
+                  <input
+                    type="text"
+                    placeholder="Entrez votre pseudo"
+                    value={playerNameInput}
+                    onChange={(e) => setPlayerNameInput(e.target.value)}
+                    maxLength={20}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Code de la Salle</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: ABC123"
+                    value={roomCodeInput}
+                    onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+                    maxLength={6}
+                    style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.2rem' }}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button 
+                    className="btn-join"
+                    onClick={() => {
+                      if (playerNameInput.trim() && roomCodeInput.trim()) {
+                        joinRoom(roomCodeInput, playerNameInput);
+                      }
+                    }}
+                    disabled={!playerNameInput.trim() || !roomCodeInput.trim() || !isConnected}
+                  >
+                    🔗 Rejoindre la Salle
+                  </button>
+                  <button 
+                    className="btn-back"
+                    onClick={() => {
+                      setRoomAction(null);
+                      setPlayerNameInput('');
+                      setRoomCodeInput('');
+                    }}
+                  >
+                    ← Retour
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button className="back-btn" onClick={() => {
+              setGameMode(null);
+              setShowRoomInterface(false);
+              setRoomAction(null);
+            }}>
+              ← Retour au menu
+            </button>
+          </div>
+        )}
+
+        {/* Salle d'attente pour le mode en ligne */}
+        {!gameStarted && gameMode === 'online' && roomCode && !onlineGameStarted && (
+          <div className="waiting-room">
+            <h1 className="room-title">🎮 Salle de Jeu</h1>
+            
+            <div className="room-code-display">
+              <h2>Code de la Salle</h2>
+              <div className="code-box">{roomCode}</div>
+              <p className="code-hint">Partagez ce code avec votre adversaire</p>
+            </div>
+
+            <div className="players-waiting">
+              <div className="player-card you">
+                <span className="player-icon">👤</span>
+                <span className="player-name">{onlinePlayerName || playerNameInput}</span>
+                <span className="player-status">✅ Prêt</span>
+              </div>
+
+              {opponent ? (
+                <div className="player-card opponent">
+                  <span className="player-icon">👤</span>
+                  <span className="player-name">{opponent}</span>
+                  <span className="player-status">✅ Prêt</span>
+                </div>
+              ) : (
+                <div className="player-card waiting">
+                  <span className="player-icon">⏳</span>
+                  <span className="player-name">En attente...</span>
+                  <span className="player-status">Partagez le code</span>
+                </div>
+              )}
+            </div>
+
+            {opponent && (
+              <button className="btn-start-game" onClick={startOnlineGame}>
+                ⚔️ Commencer la Partie
+              </button>
+            )}
+
+            <button className="btn-leave" onClick={() => {
+              leaveRoom();
+              setShowRoomInterface(true);
+            }}>
+              🚪 Quitter la Salle
+            </button>
+          </div>
+        )}
+
+        {!gameStarted && gameMode && !showRoomInterface && (
           <div className="game-setup">
+            <div className="mode-indicator">
+              <span className="mode-badge">
+                {gameMode === 'local' ? '🤖 Mode Local' : '🌐 Mode En Ligne'}
+              </span>
+              <button className="change-mode-btn" onClick={() => setGameMode(null)}>
+                ↩️ Changer de mode
+              </button>
+            </div>
+            
             <h2>🎯 Choisissez votre module de combat :</h2>
+            
+            {gameMode === 'local' && (
+              <div className="bot-difficulty-selector">
+                <h3>🤖 Difficulté du Bot IA</h3>
+                <div className="difficulty-buttons">
+                  <button 
+                    className={`difficulty-btn easy ${botDifficulty === 'easy' ? 'active' : ''}`}
+                    onClick={() => setBotDifficulty('easy')}
+                  >
+                    <span className="diff-icon">😊</span>
+                    <span className="diff-label">Facile</span>
+                    <span className="diff-desc">40% précision</span>
+                  </button>
+                  <button 
+                    className={`difficulty-btn medium ${botDifficulty === 'medium' ? 'active' : ''}`}
+                    onClick={() => setBotDifficulty('medium')}
+                  >
+                    <span className="diff-icon">😐</span>
+                    <span className="diff-label">Moyen</span>
+                    <span className="diff-desc">60% précision</span>
+                  </button>
+                  <button 
+                    className={`difficulty-btn hard ${botDifficulty === 'hard' ? 'active' : ''}`}
+                    onClick={() => setBotDifficulty('hard')}
+                  >
+                    <span className="diff-icon">😤</span>
+                    <span className="diff-label">Difficile</span>
+                    <span className="diff-desc">80% précision</span>
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="arena-selector">
               <h3>🏛️ Choisissez votre Arène de Combat</h3>
@@ -1002,6 +1673,23 @@ const CyberGame = () => {
             </div>
           </div>
 
+          {/* Indicateur de tour pour le mode online */}
+          {gameMode === 'online' && onlineGameStarted && (
+            <div className={`turn-indicator ${isMyTurn ? 'your-turn' : 'opponent-turn'}`}>
+              {isMyTurn ? (
+                <>
+                  <span className="turn-icon">✨</span>
+                  <span className="turn-text">C'est votre tour !</span>
+                </>
+              ) : (
+                <>
+                  <span className="turn-icon">⏳</span>
+                  <span className="turn-text">Tour de l'adversaire...</span>
+                </>
+              )}
+            </div>
+          )}
+
           {currentQuestion && (
             <div className={`question-panel ${isHealingQuestion ? 'healing' : ''}`}>
               <div className="question-header">
@@ -1058,7 +1746,11 @@ const CyberGame = () => {
           {!currentQuestion && currentTurn === 'player' && player.health > 0 && enemy.health > 0 && (
             <div className="action-panel">
               <div className="action-buttons-grid">
-                <button onClick={playerAttack} className="action-btn attack-btn">
+                <button 
+                  onClick={playerAttack} 
+                  className="action-btn attack-btn"
+                  disabled={gameMode === 'online' && onlineGameStarted && !isMyTurn}
+                >
                   <div className="btn-icon">⚔️</div>
                   <div className="btn-content">
                     <span className="btn-title">ATTAQUER</span>
@@ -1069,7 +1761,7 @@ const CyberGame = () => {
                 <button 
                   onClick={healPlayer} 
                   className="action-btn heal-btn"
-                  disabled={player.health === player.maxHealth || player.mana < 20}
+                  disabled={player.health === player.maxHealth || player.mana < 20 || (gameMode === 'online' && onlineGameStarted && !isMyTurn)}
                 >
                   <div className="btn-icon">💚</div>
                   <div className="btn-content">
@@ -1084,6 +1776,12 @@ const CyberGame = () => {
 
           <div className="battle-log">
             <h3>📜 Journal de Combat</h3>
+            {botThinking && gameMode === 'local' && (
+              <div className="bot-thinking-indicator">
+                <span className="thinking-dots">🤖 Le bot réfléchit</span>
+                <span className="dots">...</span>
+              </div>
+            )}
             <div className="log-entries">
               {battleLog.map((entry, index) => (
                 <div key={index} className="log-entry">

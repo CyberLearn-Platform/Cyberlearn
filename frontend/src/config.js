@@ -1,7 +1,8 @@
 // Configuration des URLs pour différents environnements
 const config = {
   development: {
-    API_BASE_URL: 'http://127.0.0.1:5000',
+    // Utiliser l'IP du réseau local pour permettre les connexions d'autres PC
+    API_BASE_URL: process.env.REACT_APP_API_URL || 'http://192.168.1.65:5000',
     FRONTEND_URL: 'http://localhost:3000'
   },
   production: {

@@ -140,7 +140,17 @@ function Challenge() {
             ← {t('backToDashboard')}
           </button>
           <div className="module-info">
-            <h1>{challenge.module.title}</h1>
+            <h1 style={{
+              color: '#2563eb',
+              textShadow: 'none',
+              filter: 'none',
+              WebkitFilter: 'none',
+              background: 'none',
+              backgroundClip: 'unset',
+              WebkitBackgroundClip: 'unset',
+              WebkitTextFillColor: '#2563eb',
+              animation: 'none'
+            }}>{challenge.module.title}</h1>
             <p>{challenge.module.description}</p>
             <div className="progress-indicator">
               <span>{t('progress')}: {challenge.completed}/{challenge.total_questions} {t('completed')}</span>

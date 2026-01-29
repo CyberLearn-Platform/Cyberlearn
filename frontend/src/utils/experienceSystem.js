@@ -1,7 +1,7 @@
 // Système d'expérience et de niveaux amélioré
 export const EXPERIENCE_SYSTEM = {
   XP_PER_CORRECT_ANSWER: 25,
-  XP_PER_WRONG_ANSWER: -15,
+  XP_PER_WRONG_ANSWER: 0, // Pas de pénalité, juste pas de gain
   XP_PER_LESSON_COMPLETED: 100,
   XP_BONUS_PERFECT_QUIZ: 200,
   XP_BONUS_STREAK_3: 15,
@@ -159,7 +159,8 @@ export const useUserExperience = () => {
   
   const updateUserXp = (xpGained, source = 'unknown') => {
     const currentData = getUserData();
-    const newTotalXp = currentData.totalXp + xpGained;
+    // Empêcher l'XP négatif - minimum 0
+    const newTotalXp = Math.max(0, currentData.totalXp + xpGained);
     const newLevel = EXPERIENCE_SYSTEM.getLevelFromXp(newTotalXp);
     const leveledUp = newLevel > currentData.level;
     
@@ -175,6 +176,34 @@ export const useUserExperience = () => {
     };
     
     localStorage.setItem('userProgress', JSON.stringify(updatedData));
+    
+    // SYNCHRONISATION GLOBALE - Mettre à jour aussi userExperience pour AuthContext
+    const currentLevelXp = EXPERIENCE_SYSTEM.getCurrentLevelXp(newTotalXp);
+    const xpForNextLevel = EXPERIENCE_SYSTEM.getXpForLevel(newLevel);
+    
+    const globalXpData = {
+      level: newLevel,
+      totalXp: newTotalXp,
+      currentLevelXp: currentLevelXp,
+      xpToNextLevel: xpForNextLevel,
+      streak: updatedData.streak || 0,
+      badges: updatedData.badges || []
+    };
+    
+    localStorage.setItem('userExperience', JSON.stringify(globalXpData));
+    
+    // Notifier TOUS les composants via événements multiples
+    window.dispatchEvent(new CustomEvent('levelUpdate', { detail: globalXpData }));
+    window.dispatchEvent(new CustomEvent('globalLevelSync', { detail: globalXpData }));
+    
+    // Synchronisation cross-tab via BroadcastChannel
+    try {
+      const broadcastChannel = new BroadcastChannel('levelSync');
+      broadcastChannel.postMessage(globalXpData);
+      broadcastChannel.close();
+    } catch (e) {
+      console.warn('BroadcastChannel not supported:', e);
+    }
     
     return {
       leveledUp,
