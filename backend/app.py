@@ -8,6 +8,8 @@ import hashlib
 import secrets
 import hashlib
 from game_rooms import room_manager
+from labs_manager import start_lab
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'cyberforge-secret-key-2024'
@@ -1513,6 +1515,35 @@ def handle_leave_room_event():
         if opponent_sid:
             emit('opponent_left', {'message': 'Votre adversaire a quitté la partie'}, room=opponent_sid)
         emit('left_room', {'message': 'Vous avez quitté la salle'})
+
+@app.route("/api/start-lab", methods=["POST"])
+def start_lab_api():
+    if not request.is_json:
+        return {"error": "JSON required"}, 400
+
+    data = request.get_json()
+    username = data.get("username")
+
+    if not username:
+        return {"error": "Missing username"}, 400
+
+    lab = start_lab(username)
+
+    return {
+        "target": "127.0.0.1",
+        "port": lab["port"],
+        "message": "Lab started"
+    }
+
+
+@app.route("/api/submit-flag", methods=["POST"])
+def submit_flag():
+    flag = request.json["flag"]
+
+    if flag == "FLAG{cyberforge_docker_sqli}":
+        return {"success": True, "xp": 100}
+
+    return {"success": False}
 
 
 if __name__ == '__main__':

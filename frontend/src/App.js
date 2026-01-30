@@ -11,6 +11,7 @@ import CyberGame from "./pages/CyberGame";
 import QuizSelection from "./pages/QuizSelection";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import Lab from "./pages/Lab";
 
 function App() {
   return (
@@ -20,36 +21,55 @@ function App() {
           <Routes>
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            } />
-            <Route path="/course/:moduleId" element={
-              <ProtectedRoute>
-                <NewCourseViewer />
-              </ProtectedRoute>
-            } />
-            <Route path="/challenge/:moduleId" element={
-              <ProtectedRoute>
-                <NewQuizPlayer />
-              </ProtectedRoute>
-            } />
-            <Route path="/leaderboard" element={
-              <ProtectedRoute>
-                <NewLeaderboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/cybergame" element={
-              <ProtectedRoute>
-                <CyberGame />
-              </ProtectedRoute>
-            } />
-            <Route path="/quizzes" element={
-              <ProtectedRoute>
-                <QuizSelection />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/course/:moduleId"
+              element={
+                <ProtectedRoute>
+                  <NewCourseViewer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/challenge/:moduleId"
+              element={
+                <ProtectedRoute>
+                  <NewQuizPlayer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <ProtectedRoute>
+                  <NewLeaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cybergame"
+              element={
+                <ProtectedRoute>
+                  <CyberGame />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quizzes"
+              element={
+                <ProtectedRoute>
+                  <QuizSelection />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/labs/web-sqli" element={<Lab />} />
           </Routes>
         </Router>
       </LanguageProvider>
