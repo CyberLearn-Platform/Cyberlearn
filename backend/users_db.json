@@ -1,0 +1,78 @@
+{
+  "admin": {
+    "id": "admin_user",
+    "email": "admin@cyberforge.com",
+    "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "created_at": "2026-02-05T23:28:53.753194",
+    "progress": {
+      "web_security": {
+        "completed": true,
+        "score": 100
+      },
+      "cryptography": {
+        "completed": true,
+        "score": 100
+      },
+      "ethical_hacking": {
+        "completed": true,
+        "score": 100
+      },
+      "incident_response": {
+        "completed": true,
+        "score": 100
+      },
+      "test_module": {
+        "completed": true,
+        "score": 90
+      }
+    },
+    "completed_modules": [
+      "web_security",
+      "cryptography",
+      "ethical_hacking",
+      "incident_response"
+    ],
+    "completed_quizzes": [
+      "web_security",
+      "cryptography",
+      "ethical_hacking",
+      "incident_response"
+    ],
+    "level": 5,
+    "experience": 500,
+    "is_admin": true
+  },
+  "moh": {
+    "id": "user_1_moh",
+    "email": "dd@gmail.com",
+    "password": "3fab880164450a6c7ffdecfe8c044ed3b206bbf3560127f4c6906fac8d40d8c9",
+    "created_at": "2026-02-05T23:29:52.402132",
+    "progress": {
+      "totalXp": 150,
+      "level": 2,
+      "completedQuizzes": [],
+      "completedLessons": []
+    },
+    "level": 2,
+    "experience": 150,
+    "completed_modules": []
+  },
+  "pip": {
+    "id": "user_2_pip",
+    "email": "kk@gmail.com",
+    "password": "3fab880164450a6c7ffdecfe8c044ed3b206bbf3560127f4c6906fac8d40d8c9",
+    "created_at": "2026-02-05T23:32:10.719005",
+    "progress": {},
+    "level": 1,
+    "experience": 0
+  },
+  "kok": {
+    "id": "user_3_kok",
+    "email": "nn@gmail.com",
+    "password": "3fab880164450a6c7ffdecfe8c044ed3b206bbf3560127f4c6906fac8d40d8c9",
+    "created_at": "2026-02-06T00:35:47.473291",
+    "progress": {},
+    "level": 1,
+    "experience": 0
+  }
+}

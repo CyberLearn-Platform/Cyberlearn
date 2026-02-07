@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
+import { useExperienceSystem } from "../utils/experienceSystem";
 import "../styles/Course.css";
 
 function CourseViewer() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
+  const { markLessonCompleted } = useExperienceSystem();
   const [module, setModule] = useState(null);
   const [currentLesson, setCurrentLesson] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -36,6 +38,11 @@ function CourseViewer() {
 
   const nextLesson = () => {
     if (module && currentLesson < module.lessons.length - 1) {
+      // Marquer la leçon actuelle comme complétée
+      const lessonId = `${moduleId}_lesson_${currentLesson + 1}`;
+      markLessonCompleted(lessonId);
+      console.log(`✅ Leçon ${currentLesson + 1} marquée comme complétée:`, lessonId);
+      
       setCurrentLesson(currentLesson + 1);
     }
   };
@@ -47,6 +54,11 @@ function CourseViewer() {
   };
 
   const goToQuiz = () => {
+    // Marquer la dernière leçon comme complétée avant d'aller au quiz
+    const lessonId = `${moduleId}_lesson_${currentLesson + 1}`;
+    markLessonCompleted(lessonId);
+    console.log(`✅ Dernière leçon marquée comme complétée:`, lessonId);
+    
     navigate(`/challenge/${moduleId}`);
   };
 

@@ -1,4 +1,6 @@
 // Système d'expérience et de niveaux amélioré
+import { API_BASE_URL } from '../config';
+
 export const EXPERIENCE_SYSTEM = {
   XP_PER_CORRECT_ANSWER: 25,
   XP_PER_WRONG_ANSWER: 0, // Pas de pénalité, juste pas de gain
@@ -157,7 +159,7 @@ export const useUserExperience = () => {
     };
   };
   
-  const updateUserXp = (xpGained, source = 'unknown') => {
+  const updateUserXp = async (xpGained, source = 'unknown') => {
     const currentData = getUserData();
     // Empêcher l'XP négatif - minimum 0
     const newTotalXp = Math.max(0, currentData.totalXp + xpGained);
@@ -191,6 +193,63 @@ export const useUserExperience = () => {
     };
     
     localStorage.setItem('userExperience', JSON.stringify(globalXpData));
+    
+    // SYNCHRONISER AVEC LE BACKEND
+    const syncWithBackend = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          console.log('🔄 [SYNC] Envoi des données au backend:', { 
+            experience: newTotalXp, 
+            level: newLevel,
+            completedQuizzes: currentData.completedQuizzes?.length || 0,
+            completedModules: currentData.completedLessons?.length || 0,
+            source 
+          });
+          
+          const response = await fetch(`${API_BASE_URL}/api/user/progress`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              experience: newTotalXp,
+              level: newLevel,
+              progress: currentData,
+              completed_quizzes: currentData.completedQuizzes || [],
+              completed_modules: currentData.completedLessons || []
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ [SYNC] Synchronisation backend réussie:', result.message);
+          } else if (response.status === 401) {
+            console.error('❌ [SYNC] Token invalide - Déconnexion automatique...');
+            window.dispatchEvent(new CustomEvent('tokenExpired'));
+          } else {
+            const error = await response.json();
+            console.error('❌ [SYNC] Erreur backend:', error);
+          }
+        } else {
+          console.warn('⚠️ [SYNC] Pas de token d\'authentification - synchronisation ignorée');
+        }
+      } catch (error) {
+        console.error('❌ [SYNC] Échec de synchronisation avec backend:', error);
+      }
+    };
+    // FORCER LA SYNCHRONISATION IMMÉDIATE ET ATTENDRE LA CONFIRMATION
+    await syncWithBackend();
+    
+    // SI MONTÉE DE NIVEAU, FORCER LE RECHARGEMENT DU LEADERBOARD
+    if (leveledUp) {
+      console.log('🎉 [LEVEL UP] Montée de niveau détectée ! Rechargement du leaderboard...');
+      // Attendre un peu que le backend mette à jour
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('forceLeaderboardRefresh'));
+      }, 1000);
+    }
     
     // Notifier TOUS les composants via événements multiples
     window.dispatchEvent(new CustomEvent('levelUpdate', { detail: globalXpData }));
@@ -257,4 +316,59 @@ export const useUserExperience = () => {
     markQuizCompleted,
     markLessonCompleted
   };
+};
+
+// Fonction pour synchroniser manuellement avec le backend
+export const syncProgressWithBackend = async () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const userProgress = localStorage.getItem('userProgress');
+    const userExperience = localStorage.getItem('userExperience');
+    
+    if (!token) {
+      console.warn('⚠️ [SYNC] Pas de token - synchronisation ignorée');
+      return false;
+    }
+    
+    const progressData = JSON.parse(userProgress || '{}');
+    const xpData = JSON.parse(userExperience || '{}');
+    
+    const totalXp = xpData.totalXp || progressData.totalXp || 0;
+    const level = xpData.level || progressData.level || 1;
+    
+    console.log('🔄 [SYNC] Synchronisation...', { level, totalXp });
+    
+    const response = await fetch(`${API_BASE_URL}/api/user/progress`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        experience: totalXp,
+        level: level,
+        progress: progressData,
+        completed_quizzes: progressData.completedQuizzes || [],
+        completed_modules: progressData.completedLessons || []
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ [SYNC] Synchronisation réussie - Level', level, 'XP', totalXp);
+      return true;
+    } else if (response.status === 401) {
+      console.error('❌ [SYNC] Token invalide ou expiré - Reconnexion requise');
+      // Déclencher un événement pour forcer la déconnexion
+      window.dispatchEvent(new CustomEvent('tokenExpired'));
+      return false;
+    } else {
+      const error = await response.json();
+      console.error('❌ [SYNC] Erreur:', error);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ [SYNC] Échec:', error);
+    return false;
+  }
 };

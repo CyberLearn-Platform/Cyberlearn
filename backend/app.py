@@ -9,6 +9,7 @@ import secrets
 import hashlib
 from game_rooms import room_manager
 from labs_manager import start_lab
+import database as db
 
 
 app = Flask(__name__)
@@ -23,13 +24,14 @@ socketio = SocketIO(
     async_mode='threading'
 )
 
-# Simulated database (in production, use a real database)
-users_db = {}
-sessions_db = {}
-
 # Helper function to hash passwords
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+# Sessions en mémoire (tokens)
+sessions_db = {}
+
+print("🗄️ Utilisation de la base de données SQLite")
 
 # Helper function to generate session token
 def generate_session_token(username):
@@ -56,30 +58,23 @@ def register():
         if not username or not email or not password:
             return jsonify({"error": "Missing required fields"}), 400
         
-        if username in users_db:
+        # Vérifier si l'utilisateur existe déjà
+        existing_user = db.get_user_by_username(username)
+        if existing_user:
             return jsonify({"error": "Username already exists"}), 409
         
-        # Generate unique user ID
-        user_id = f"user_{len(users_db)}_{username}"
+        # Créer l'utilisateur dans la base de données
+        hashed_password = hash_password(password)
+        if not db.create_user(username, email, hashed_password):
+            return jsonify({"error": "Failed to create user"}), 500
         
-        # Store user (in production, use proper database)
-        users_db[username] = {
-            "id": user_id,
-            "email": email,
-            "password": hash_password(password),
-            "created_at": datetime.now().isoformat(),
-            "progress": {},
-            "level": 1,
-            "experience": 0
-        }
-        
-        # Générer un token de session automatiquement pour connexion directe
+        # Générer un token de session
         token = generate_session_token(username)
         
         return jsonify({
             "message": "User created successfully",
             "username": username,
-            "userId": user_id,
+            "userId": f"user_{username}",
             "token": token,
             "user": {
                 "username": username,
@@ -90,6 +85,7 @@ def register():
         }), 201
         
     except Exception as e:
+        print(f"❌ [REGISTER] Erreur: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -102,13 +98,16 @@ def login():
         if not username or not password:
             return jsonify({"error": "Missing username or password"}), 400
         
-        if username not in users_db:
+        # Récupérer l'utilisateur depuis la base de données
+        user = db.get_user_by_username(username)
+        if not user:
             return jsonify({"error": "Invalid credentials"}), 401
         
-        if users_db[username]["password"] != hash_password(password):
+        # Vérifier le mot de passe
+        if user["password"] != hash_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
         
-        # Generate session token
+        # Générer un token de session
         token = generate_session_token(username)
         
         return jsonify({
@@ -116,13 +115,15 @@ def login():
             "token": token,
             "user": {
                 "username": username,
-                "email": users_db[username]["email"],
-                "level": users_db[username]["level"],
-                "experience": users_db[username]["experience"]
+                "email": user["email"],
+                "level": user["level"],
+                "experience": user["experience"],
+                "is_admin": bool(user.get("is_admin", 0))
             }
         }), 200
         
     except Exception as e:
+        print(f"❌ [LOGIN] Erreur: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Module data
@@ -1262,6 +1263,41 @@ def get_quest(quest_id):
     else:
         return jsonify({"error": "Quest not found"}), 404
 
+@app.route('/api/user/data', methods=['GET'])
+def get_user_data():
+    """Récupérer les données utilisateur depuis le backend"""
+    try:
+        # Get auth token from headers
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        if token not in sessions_db:
+            return jsonify({"error": "Invalid token"}), 401
+        
+        username = sessions_db[token]
+        
+        # Récupérer l'utilisateur
+        user = db.get_user_by_username(username)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        return jsonify({
+            "username": user["username"],
+            "email": user["email"],
+            "level": user["level"],
+            "experience": user["experience"],
+            "is_admin": bool(user.get("is_admin", 0)),
+            "completed_quizzes": json.loads(user.get("completed_quizzes", "[]")),
+            "completed_modules": json.loads(user.get("completed_modules", "[]")),
+            "progress": json.loads(user.get("progress", "{}"))
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [GET_USER_DATA] Erreur: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/user/progress', methods=['POST'])
 def update_progress():
     try:
@@ -1277,32 +1313,82 @@ def update_progress():
         username = sessions_db[token]
         data = request.get_json()
         
-        # Update user progress
-        if username in users_db:
-            users_db[username]["progress"].update(data.get("progress", {}))
-            users_db[username]["experience"] = data.get("experience", users_db[username]["experience"])
-            users_db[username]["level"] = data.get("level", users_db[username]["level"])
+        # Récupérer l'utilisateur
+        user = db.get_user_by_username(username)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
         
-        return jsonify({"message": "Progress updated successfully"})
+        # Préparer les données à mettre à jour
+        experience = data.get("experience")
+        level = data.get("level")
+        progress = data.get("progress")
+        completed_modules = data.get("completed_modules")
+        completed_quizzes = data.get("completed_quizzes")
+        
+        # Extraire les IDs si c'est un format avec objets
+        if completed_quizzes and isinstance(completed_quizzes, list) and len(completed_quizzes) > 0:
+            if isinstance(completed_quizzes[0], dict):
+                completed_quizzes = [q.get("id") for q in completed_quizzes if q.get("id")]
+        
+        # Mettre à jour dans la base de données
+        success = db.update_user_progress(
+            username=username,
+            experience=experience,
+            level=level,
+            progress=progress,
+            completed_modules=completed_modules,
+            completed_quizzes=completed_quizzes
+        )
+        
+        if success:
+            # Récupérer les données mises à jour
+            updated_user = db.get_user_by_username(username)
+            
+            # 🔄 NOTIFICATION TEMPS RÉEL : Envoyer SEULEMENT si changement réel
+            # Comparer avec les anciennes données
+            old_level = user["level"]
+            old_experience = user["experience"]
+            new_level = updated_user["level"]
+            new_experience = updated_user["experience"]
+            
+            # Envoyer notification uniquement si changement
+            if new_level != old_level or new_experience != old_experience:
+                socketio.emit('leaderboard_update', {
+                    'username': username,
+                    'level': new_level,
+                    'experience': new_experience,
+                    'message': f"{username} a progressé ! Niveau {new_level}, {new_experience} XP"
+                })
+                print(f"📡 [REALTIME] Notification envoyée: {username} → Level {new_level}, XP {new_experience}")
+            else:
+                print(f"🔕 [REALTIME] Pas de changement, notification ignorée: {username} → Level {new_level}, XP {new_experience}")
+            
+            return jsonify({
+                "message": "Progress updated successfully",
+                "user": {
+                    "level": updated_user["level"],
+                    "experience": updated_user["experience"],
+                    "completed_quizzes": json.loads(updated_user.get("completed_quizzes", "[]")),
+                    "completed_modules": json.loads(updated_user.get("completed_modules", "[]"))
+                }
+            })
+        else:
+            return jsonify({"error": "Failed to update progress"}), 500
         
     except Exception as e:
+        print(f"❌ [PROGRESS] Erreur: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/leaderboard')
 def get_leaderboard():
-    # Create leaderboard from users
-    leaderboard = []
-    for username, user_data in users_db.items():
-        leaderboard.append({
-            "username": username,
-            "level": user_data.get("level", 1),
-            "experience": user_data.get("experience", 0)
-        })
-    
-    # Sort by experience descending
-    leaderboard.sort(key=lambda x: x["experience"], reverse=True)
-    
-    return jsonify({"leaderboard": leaderboard[:10]})  # Top 10
+    try:
+        # Récupérer le leaderboard depuis la base de données
+        leaderboard = db.get_leaderboard(limit=50)
+        print(f"📊 [LEADERBOARD] {len(leaderboard)} joueurs chargés")
+        return jsonify(leaderboard)
+    except Exception as e:
+        print(f"❌ [LEADERBOARD] Erreur: {e}")
+        return jsonify([]), 500
 
 @app.route('/api/health')
 def health_check():
@@ -1312,6 +1398,316 @@ def health_check():
         "users_count": len(users_db),
         "active_sessions": len(sessions_db)
     })
+
+# ===================================
+# ADMIN ROUTES
+# ===================================
+
+def verify_admin(token):
+    """Vérifie si l'utilisateur est admin"""
+    if token not in sessions_db:
+        return None
+    username = sessions_db[token]
+    
+    # Récupérer l'utilisateur depuis la base de données SQLite
+    user = db.get_user_by_username(username)
+    if not user:
+        return None
+    
+    if not bool(user.get("is_admin", 0)):
+        return None
+    
+    return username
+
+@app.route('/api/admin/modules', methods=['POST'])
+def create_module():
+    """Créer un nouveau module de cours"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        data = request.get_json()
+        module_id = data.get('id')
+        
+        if module_id in modules_data:
+            return jsonify({"error": "Module already exists"}), 409
+        
+        modules_data[module_id] = {
+            "id": module_id,
+            "title": data.get('title'),
+            "description": data.get('description'),
+            "icon": data.get('icon', '📚'),
+            "difficulty": data.get('difficulty', 'Débutant'),
+            "duration": data.get('duration', '30 min'),
+            "lessons": data.get('lessons', [])
+        }
+        
+        return jsonify({"message": "Module created successfully", "module": modules_data[module_id]}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/modules/<module_id>', methods=['PUT'])
+def update_module(module_id):
+    """Mettre à jour un module existant"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        if module_id not in modules_data:
+            return jsonify({"error": "Module not found"}), 404
+        
+        data = request.get_json()
+        
+        # Mettre à jour les champs fournis
+        if 'title' in data:
+            modules_data[module_id]['title'] = data['title']
+        if 'description' in data:
+            modules_data[module_id]['description'] = data['description']
+        if 'icon' in data:
+            modules_data[module_id]['icon'] = data['icon']
+        if 'difficulty' in data:
+            modules_data[module_id]['difficulty'] = data['difficulty']
+        if 'duration' in data:
+            modules_data[module_id]['duration'] = data['duration']
+        if 'lessons' in data:
+            modules_data[module_id]['lessons'] = data['lessons']
+        
+        return jsonify({"message": "Module updated successfully", "module": modules_data[module_id]}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/modules/<module_id>', methods=['DELETE'])
+def delete_module(module_id):
+    """Supprimer un module"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        if module_id not in modules_data:
+            return jsonify({"error": "Module not found"}), 404
+        
+        del modules_data[module_id]
+        
+        return jsonify({"message": "Module deleted successfully"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/quizzes', methods=['POST'])
+def create_quiz():
+    """Créer un nouveau quiz"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        data = request.get_json()
+        quiz_id = data.get('id')
+        questions = data.get('questions', [])
+        
+        # Sauvegarder le quiz dans un fichier JSON
+        quest_file = os.path.join(os.path.dirname(__file__), 'quests', f'{quiz_id}.json')
+        
+        with open(quest_file, 'w', encoding='utf-8') as f:
+            json.dump(questions, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({"message": "Quiz created successfully"}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/quizzes/<quiz_id>', methods=['DELETE'])
+def delete_quiz(quiz_id):
+    """Supprimer un quiz"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        quest_file = os.path.join(os.path.dirname(__file__), 'quests', f'{quiz_id}.json')
+        
+        if not os.path.exists(quest_file):
+            return jsonify({"error": "Quiz not found"}), 404
+        
+        os.remove(quest_file)
+        
+        print(f"[ADMIN] Quiz deleted: {quiz_id}")
+        
+        return jsonify({"message": "Quiz deleted successfully"}), 200
+        
+    except Exception as e:
+        print(f"[ERROR] Delete quiz: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/quizzes/<quiz_id>', methods=['PUT'])
+def update_quiz(quiz_id):
+    """Mettre à jour un quiz existant"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        data = request.get_json()
+        questions = data.get('questions', [])
+        
+        quest_file = os.path.join(os.path.dirname(__file__), 'quests', f'{quiz_id}.json')
+        
+        if not os.path.exists(quest_file):
+            return jsonify({"error": "Quiz not found"}), 404
+        
+        with open(quest_file, 'w', encoding='utf-8') as f:
+            json.dump(questions, f, ensure_ascii=False, indent=2)
+        
+        print(f"[ADMIN] Quiz updated: {quiz_id}")
+        
+        return jsonify({"message": "Quiz updated successfully"}), 200
+        
+    except Exception as e:
+        print(f"[ERROR] Update quiz: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/stats')
+def get_admin_stats():
+    """Obtenir les statistiques pour le dashboard admin"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        stats = {
+            "total_users": len(users_db),
+            "total_modules": len(modules_data),
+            "total_quizzes": len([f for f in os.listdir(os.path.join(os.path.dirname(__file__), 'quests')) if f.endswith('.json')]),
+            "active_sessions": len(sessions_db)
+        }
+        
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users')
+def get_all_users():
+    """Obtenir la liste de tous les utilisateurs"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        # Récupérer tous les utilisateurs depuis la base de données SQLite
+        all_users = db.get_all_users()
+        
+        users_list = []
+        for user_data in all_users:
+            users_list.append({
+                "username": user_data.get("username", ""),
+                "email": user_data.get("email", ""),
+                "level": user_data.get("level", 1),
+                "xp": user_data.get("experience", 0),
+                "is_admin": bool(user_data.get("is_admin", 0)),
+                "completed_modules": json.loads(user_data.get("completed_modules", "[]")),
+                "completed_quizzes": json.loads(user_data.get("completed_quizzes", "[]"))
+            })
+        
+        print(f"👥 [ADMIN] {len(users_list)} utilisateurs chargés depuis SQLite")
+        
+        return jsonify({"users": users_list}), 200
+        
+    except Exception as e:
+        print(f"❌ [ADMIN] Erreur: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users/<username>', methods=['DELETE'])
+def delete_user(username):
+    """Supprimer un utilisateur"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({"error": "No authorization token"}), 401
+        
+        token = auth_header.replace('Bearer ', '')
+        admin = verify_admin(token)
+        if not admin:
+            return jsonify({"error": "Admin access required"}), 403
+        
+        # Vérifier que l'utilisateur existe dans SQLite
+        user = db.get_user_by_username(username)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Empêcher la suppression de son propre compte
+        if admin == username:
+            return jsonify({"error": "Cannot delete your own account"}), 400
+        
+        # Empêcher la suppression d'un admin
+        if user.get('is_admin', 0):
+            return jsonify({"error": "Cannot delete admin accounts"}), 403
+        
+        # Supprimer l'utilisateur de SQLite
+        import sqlite3
+        conn = sqlite3.connect('backend/cyberforge.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM users WHERE username = ?', (username,))
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ [ADMIN] Utilisateur '{username}' supprimé")
+        
+        # Supprimer aussi les sessions associées
+        sessions_to_remove = [sid for sid, uname in sessions_db.items() if uname == username]
+        for sid in sessions_to_remove:
+            del sessions_db[sid]
+        
+        return jsonify({"message": "User deleted successfully"}), 200
+        
+    except Exception as e:
+        print(f"❌ [DELETE USER] Erreur: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # Error handlers
 @app.errorhandler(404)
@@ -1518,32 +1914,103 @@ def handle_leave_room_event():
 
 @app.route("/api/start-lab", methods=["POST"])
 def start_lab_api():
-    if not request.is_json:
-        return {"error": "JSON required"}, 400
+    """Start a CTF lab environment"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "JSON required"}), 400
 
-    data = request.get_json()
-    username = data.get("username")
+        data = request.get_json()
+        username = data.get("username")
+        lab_id = data.get("lab_id", "web-sqli")
 
-    if not username:
-        return {"error": "Missing username"}, 400
+        if not username:
+            return jsonify({"error": "Missing username"}), 400
 
-    lab = start_lab(username)
+        # Start the lab with the specified lab_id
+        result = start_lab(username, lab_id)
+        
+        if result.get("success"):
+            return jsonify({
+                "success": True,
+                "target": result["target"],
+                "port": result["port"],
+                "container": result["container"],
+                "lab_id": result["lab_id"],
+                "message": f"Lab {lab_id} started successfully"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": result.get("error", "Failed to start lab")
+            }), 500
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    return {
-        "target": "127.0.0.1",
-        "port": lab["port"],
-        "message": "Lab started"
-    }
+
+@app.route("/api/stop-lab", methods=["POST"])
+def stop_lab_api():
+    """Stop a running CTF lab"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "JSON required"}), 400
+
+        data = request.get_json()
+        container_name = data.get("container")
+
+        if not container_name:
+            return jsonify({"error": "Missing container name"}), 400
+
+        from labs_manager import stop_lab
+        result = stop_lab(container_name)
+        
+        if result.get("success"):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/submit-flag", methods=["POST"])
-def submit_flag():
-    flag = request.json["flag"]
+def submit_flag_api():
+    """Submit a flag for a CTF challenge"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "JSON required"}), 400
+            
+        data = request.get_json()
+        flag = data.get("flag")
+        lab_id = data.get("lab_id", "web-sqli")
 
-    if flag == "FLAG{cyberforge_docker_sqli}":
-        return {"success": True, "xp": 100}
+        if not flag:
+            return jsonify({"success": False, "error": "Missing flag"}), 400
 
-    return {"success": False}
+        # Define correct flags for each lab
+        correct_flags = {
+            "web-sqli": "FLAG{cyberforge_docker_sqli}",
+            "web-xss": "FLAG{xss_master_2024}",
+            "web-auth-bypass": "FLAG{auth_bypass_cookie_master}",
+            "crypto-caesar": "FLAG{CAESAR_CRYPTO_MASTER}",
+            "crypto-rsa": "FLAG{rsa_crypto_expert_2024}",
+        }
+        
+        # Check if flag is correct
+        if lab_id in correct_flags and flag == correct_flags[lab_id]:
+            return jsonify({
+                "success": True,
+                "message": "Correct flag! Well done!",
+                "xp": 100
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Incorrect flag. Try again!"
+            }), 200
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == '__main__':

@@ -12,6 +12,8 @@ import QuizSelection from "./pages/QuizSelection";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Lab from "./pages/Lab";
+import CTFLab from "./pages/CTFLab";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -70,6 +72,22 @@ function App() {
               }
             />
             <Route path="/labs/web-sqli" element={<Lab />} />
+            <Route
+              path="/ctf-lab"
+              element={
+                <ProtectedRoute>
+                  <CTFLab />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Router>
       </LanguageProvider>

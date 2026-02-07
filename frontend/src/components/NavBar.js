@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
+import { levelSync } from "../utils/levelSync";
+import { syncProgressWithBackend } from "../utils/experienceSystem";
 import "./NavBar.css";
 
 function NavBar() {
@@ -15,6 +17,17 @@ function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  
+  // State for user level and XP - synchronized across all pages
+  const [userLevel, setUserLevel] = useState(() => {
+    const userData = JSON.parse(localStorage.getItem('userExperience') || '{}');
+    return {
+      level: userData.level || 1,
+      currentLevelXp: userData.currentLevelXp || 0,
+      xpToNextLevel: userData.xpToNextLevel || 100,
+      totalXp: userData.totalXp || 0
+    };
+  });
 
   // Theme management
   useEffect(() => {
@@ -55,6 +68,16 @@ function NavBar() {
     navigate('/login');
   };
 
+  const handleSyncProgress = async () => {
+    console.log('🔄 [MANUEL] Synchronisation manuelle démarrée...');
+    const success = await syncProgressWithBackend();
+    if (success) {
+      alert('✅ Synchronisation réussie ! Votre progression a été sauvegardée.');
+    } else {
+      alert('❌ Erreur lors de la synchronisation. Vérifiez votre connexion.');
+    }
+  };
+
   // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -68,6 +91,36 @@ function NavBar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [userMenuOpen]);
+
+  // Synchronize level across all pages
+  useEffect(() => {
+    const updateLevel = (data) => {
+      setUserLevel({
+        level: data.level || 1,
+        currentLevelXp: data.currentLevelXp || 0,
+        xpToNextLevel: data.xpToNextLevel || 100,
+        totalXp: data.totalXp || 0
+      });
+    };
+
+    // Listen to level updates
+    levelSync.addListener(updateLevel);
+    
+    // Also listen to custom event
+    const handleLevelUpdate = (e) => updateLevel(e.detail);
+    window.addEventListener('levelUpdate', handleLevelUpdate);
+
+    // Load initial data
+    const initialData = levelSync.getCurrentData();
+    if (Object.keys(initialData).length > 0) {
+      updateLevel(initialData);
+    }
+
+    return () => {
+      levelSync.removeListener(updateLevel);
+      window.removeEventListener('levelUpdate', handleLevelUpdate);
+    };
+  }, []);
 
   return (
     <nav className="navbar">
@@ -132,6 +185,16 @@ function NavBar() {
               <span className="nav-text">CyberGame</span>
             </Link>
           </li>
+          <li>
+            <Link 
+              to="/ctf-lab" 
+              className={isActiveLink("/ctf-lab")}
+              onClick={closeMobileMenu}
+            >
+              <span className="nav-icon">🎯</span>
+              <span className="nav-text">CTF Lab</span>
+            </Link>
+          </li>
         </ul>
 
         <div className="nav-actions">
@@ -156,9 +219,41 @@ function NavBar() {
                     <div className="user-details">
                       <span className="username">{user?.username}</span>
                       <span className="user-email">{user?.email}</span>
+                      <div className="user-level-info">
+                        <span className="level-badge">⭐ Level {userLevel.level}</span>
+                        <div className="xp-mini-bar">
+                          <div 
+                            className="xp-mini-fill" 
+                            style={{width: `${(userLevel.currentLevelXp / userLevel.xpToNextLevel) * 100}%`}}
+                          ></div>
+                        </div>
+                        <span className="xp-text">{userLevel.currentLevelXp} / {userLevel.xpToNextLevel} XP</span>
+                      </div>
                     </div>
                   </div>
                   <hr className="dropdown-divider" />
+                  {user?.is_admin && (
+                    <>
+                      <Link 
+                        to="/admin" 
+                        className="admin-link"
+                        onClick={closeUserMenu}
+                      >
+                        <span className="admin-icon">🔧</span>
+                        <span className="admin-text">Administration</span>
+                      </Link>
+                      <hr className="dropdown-divider" />
+                    </>
+                  )}
+                  <button 
+                    className="logout-btn" 
+                    onClick={handleSyncProgress}
+                    aria-label="Synchroniser la progression"
+                    style={{backgroundColor: '#4CAF50', marginBottom: '8px'}}
+                  >
+                    <span className="logout-icon">🔄</span>
+                    <span className="logout-text">Synchroniser</span>
+                  </button>
                   <button 
                     className="logout-btn" 
                     onClick={handleLogout}

@@ -19,9 +19,9 @@
   --gradient-primary: linear-gradient(135deg, #2563eb, #3b82f6);
   --gradient-success: linear-gradient(135deg, #059669, #10b981);
   --gradient-secondary: linear-gradient(135deg, #475569, #64748b);
-  --glow-blue: 0 0 20px rgba(37, 99, 235, 0.4);
-  --glow-purple: 0 0 20px rgba(124, 58, 237, 0.4);
-  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.4);
+  --glow-blue: 0 0 5px rgba(37, 99, 235, 0.15);
+  --glow-purple: 0 0 5px rgba(124, 58, 237, 0.15);
+  --glow-cyan: 0 0 5px rgba(6, 182, 212, 0.15);
   --success: #059669;
   --error: #dc2626;
   --warning: #d97706;

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
+import { useLanguage } from "../context/LanguageContext";
 import "./NewCourse.css";
 
 function NewCourseViewer() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [module, setModule] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -44,24 +46,24 @@ function NewCourseViewer() {
     
     return [
       {
-        title: "Introduction",
+        title: t('introduction'),
         content: sections[0] + (sections[1] || ""),
         icon: "📚"
       },
       {
-        title: "Concepts fondamentaux", 
+        title: t('fundamentalConcepts'), 
         content: sections[2] || sections[1] || "Contenu des concepts...",
         icon: "🧠"
       },
       {
-        title: "Techniques avancées",
+        title: t('advancedTechniques'),
         content: sections[3] || "Techniques et méthodes avancées...",
         icon: "⚡"
       },
       {
-        title: "Pratique & Résumé",
+        title: t('practiceSummary'),
         content: sections[4] || `
-# Résumé du module
+# ${t('practiceSummary')}
 
 Ce module vous a permis d'apprendre :
 
@@ -128,7 +130,7 @@ Vous êtes maintenant prêt pour le quiz !
         <NavBar />
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Chargement du cours...</p>
+          <p>{t('loadingCourse')}</p>
         </div>
       </div>
     );
@@ -140,10 +142,10 @@ Vous êtes maintenant prêt pour le quiz !
         <NavBar />
         <div className="error-container">
           <div className="error-icon">❌</div>
-          <h2>Erreur</h2>
-          <p>{error || "Module non trouvé"}</p>
+          <h2>{t('error')}</h2>
+          <p>{error || t('moduleNotFound')}</p>
           <button onClick={() => navigate("/")} className="back-home-btn">
-            🏠 Retour à l'accueil
+            🏠 {t('backToHome')}
           </button>
         </div>
       </div>
@@ -173,7 +175,7 @@ Vous êtes maintenant prêt pour le quiz !
           
           <div className="progress-section">
             <div className="progress-info">
-              <span className="progress-text">{progress}% terminé</span>
+              <span className="progress-text">{progress}% {t('completedProgress')}</span>
             </div>
             <div className="progress-bar">
               <div className="progress-fill" style={{ width: `${progress}%` }}></div>
@@ -204,7 +206,7 @@ Vous êtes maintenant prêt pour le quiz !
               <h2>{currentPageData.title}</h2>
             </div>
             <div className="page-counter">
-              Page {currentPage + 1} / 4
+              {t('page')} {currentPage + 1} / 4
             </div>
           </div>
 
@@ -222,7 +224,7 @@ Vous êtes maintenant prêt pour le quiz !
                 className="nav-btn prev-btn"
               >
                 <span className="nav-icon">←</span>
-                <span>Précédent</span>
+                <span>{t('previous')}</span>
               </button>
               
               <div className="page-dots">
@@ -240,7 +242,7 @@ Vous êtes maintenant prêt pour le quiz !
                   onClick={nextPage}
                   className="nav-btn next-btn"
                 >
-                  <span>Suivant</span>
+                  <span>{t('next')}</span>
                   <span className="nav-icon">→</span>
                 </button>
               ) : (
@@ -248,7 +250,7 @@ Vous êtes maintenant prêt pour le quiz !
                   onClick={goToQuiz}
                   className="nav-btn quiz-btn"
                 >
-                  <span>Quiz</span>
+                  <span>{t('quiz')}</span>
                   <span className="nav-icon">🎯</span>
                 </button>
               )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useGameRoom } from '../hooks/useSocket';
+import NavBar from '../components/NavBar';
 import './CyberGame.css';
 
 const CyberGame = () => {
@@ -1009,25 +1010,21 @@ const CyberGame = () => {
   };
 
   return (
-    <div className="cyber-game">
-      {/* Notification Toast */}
-      {notification && (
-        <div className={`notification-toast ${notification.type}`}>
-          {notification.type === 'success' && '✅ '}
-          {notification.type === 'warning' && '⚠️ '}
-          {notification.type === 'error' && '❌ '}
-          {notification.message}
-        </div>
-      )}
-      
-      <div className="game-header">
-        <button onClick={() => {
-          setGameStarted(false);
-          navigate('/');
-        }} className="home-btn">
-          🏠 Retour à l'Accueil
-        </button>
-        <h1>🎮 CyberGame - Combat au Tour par Tour</h1>
+    <>
+      <NavBar />
+      <div className="cyber-game">
+        {/* Notification Toast */}
+        {notification && (
+          <div className={`notification-toast ${notification.type}`}>
+            {notification.type === 'success' && '✅ '}
+            {notification.type === 'warning' && '⚠️ '}
+            {notification.type === 'error' && '❌ '}
+            {notification.message}
+          </div>
+        )}
+        
+        <div className="game-header">
+          <h1>{t('cyberGameTitle')}</h1>
         
         {!gameStarted && (
           <>
@@ -1120,21 +1117,21 @@ const CyberGame = () => {
         {!gameStarted && !gameMode && (
           <div className="game-mode-selection">
             <h1 className="mode-title">🎮 CyberGame</h1>
-            <p className="mode-subtitle">Choisissez votre mode de jeu</p>
+            <p className="mode-subtitle">{t('chooseGameMode')}</p>
             
             <div className="mode-cards">
               <div className="mode-card local" onClick={() => setGameMode('local')}>
                 <div className="mode-icon">🤖</div>
-                <h3>Mode Local</h3>
-                <p>Affrontez un Bot IA intelligent</p>
+                <h3>{t('localMode')}</h3>
+                <p>{t('localModeDesc')}</p>
                 <ul className="mode-features">
-                  <li>✅ Jouez hors ligne</li>
-                  <li>✅ IA adaptative</li>
-                  <li>✅ 3 niveaux de difficulté</li>
-                  <li>✅ Progression sauvegardée</li>
+                  <li>{t('localModeFeature1')}</li>
+                  <li>{t('localModeFeature2')}</li>
+                  <li>{t('localModeFeature3')}</li>
+                  <li>{t('localModeFeature4')}</li>
                 </ul>
                 <button className="mode-btn">
-                  <span>Jouer en Local</span>
+                  <span>{t('playLocal')}</span>
                   <span className="btn-arrow">→</span>
                 </button>
               </div>
@@ -1144,23 +1141,23 @@ const CyberGame = () => {
                 setShowRoomInterface(true);
               }}>
                 <div className="mode-icon">🌐</div>
-                <h3>Mode En Ligne</h3>
-                <p>Affrontez d'autres joueurs en temps réel</p>
+                <h3>{t('onlineMode')}</h3>
+                <p>{t('onlineModeDesc')}</p>
                 <ul className="mode-features">
-                  <li>⚔️ PvP en temps réel</li>
-                  <li>🏆 Salles privées avec code</li>
-                  <li>💬 Combat synchronisé</li>
-                  <li>🎁 Système de tours</li>
+                  <li>{t('onlineModeFeature1')}</li>
+                  <li>{t('onlineModeFeature2')}</li>
+                  <li>{t('onlineModeFeature3')}</li>
+                  <li>{t('onlineModeFeature4')}</li>
                 </ul>
                 <button className="mode-btn online">
-                  <span>Jouer en Ligne</span>
+                  <span>{t('playOnline')}</span>
                   <span className="btn-arrow">→</span>
                 </button>
               </div>
             </div>
             
             <button className="back-btn" onClick={() => navigate('/')}>
-              ← Retour à l'accueil
+              {t('backToHome')}
             </button>
           </div>
         )}
@@ -1183,19 +1180,19 @@ const CyberGame = () => {
               <div className="room-actions">
                 <div className="room-action-card" onClick={() => setRoomAction('create')}>
                   <div className="action-icon">🎮</div>
-                  <h3>Créer une Salle</h3>
+                  <h3>{t('createRoom')}</h3>
                   <p>Créez une salle privée et partagez le code avec un ami</p>
                   <button className="action-btn">
-                    Créer une salle →
+                    {t('createRoom')} →
                   </button>
                 </div>
 
                 <div className="room-action-card" onClick={() => setRoomAction('join')}>
                   <div className="action-icon">🔗</div>
-                  <h3>Rejoindre une Salle</h3>
+                  <h3>{t('joinRoom')}</h3>
                   <p>Entrez le code d'une salle existante pour rejoindre la partie</p>
                   <button className="action-btn">
-                    Rejoindre une salle →
+                    {t('joinRoom')} →
                   </button>
                 </div>
               </div>
@@ -1203,12 +1200,12 @@ const CyberGame = () => {
 
             {roomAction === 'create' && (
               <div className="room-form">
-                <h2>Créer une Salle</h2>
+                <h2>{t('createRoomTitle')}</h2>
                 <div className="form-group">
-                  <label>Votre Pseudo</label>
+                  <label>{t('playerName')}</label>
                   <input
                     type="text"
-                    placeholder="Entrez votre pseudo"
+                    placeholder={t('enterPlayerName')}
                     value={playerNameInput}
                     onChange={(e) => setPlayerNameInput(e.target.value)}
                     maxLength={20}
@@ -1241,12 +1238,12 @@ const CyberGame = () => {
 
             {roomAction === 'join' && (
               <div className="room-form">
-                <h2>Rejoindre une Salle</h2>
+                <h2>{t('joinRoomTitle')}</h2>
                 <div className="form-group">
-                  <label>Votre Pseudo</label>
+                  <label>{t('playerName')}</label>
                   <input
                     type="text"
-                    placeholder="Entrez votre pseudo"
+                    placeholder={t('enterPlayerName')}
                     value={playerNameInput}
                     onChange={(e) => setPlayerNameInput(e.target.value)}
                     maxLength={20}
@@ -1694,7 +1691,7 @@ const CyberGame = () => {
             <div className={`question-panel ${isHealingQuestion ? 'healing' : ''}`}>
               <div className="question-header">
                 <span className="question-type">
-                  {isHealingQuestion ? '💚 Question de Soin' : '⚔️ Question d\'Attaque'}
+                  {isHealingQuestion ? t('healQuestion') : t('attackQuestion')}
                 </span>
                 <span className="question-module">
                   {currentQuestion.id <= 5 ? '🔐 Cryptographie' : '🌐 Sécurité Web'}
@@ -1724,7 +1721,7 @@ const CyberGame = () => {
                     className={`submit-btn ${selectedChoice === '' ? 'disabled' : ''} ${isHealingQuestion ? 'heal-submit' : ''}`}
                     disabled={selectedChoice === ''}
                   >
-                    {isHealingQuestion ? '💚 Se Soigner !' : '⚔️ Attaquer !'}
+                    {isHealingQuestion ? t('healAction') : t('attackAction')}
                   </button>
                 </div>
               )}
@@ -1800,7 +1797,8 @@ const CyberGame = () => {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

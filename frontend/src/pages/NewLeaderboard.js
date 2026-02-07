@@ -1,110 +1,160 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
-import { EXPERIENCE_SYSTEM, useUserExperience } from "../utils/experienceSystem";
 import "./NewLeaderboard.css";
+import { io } from "socket.io-client";
 
-function NewLeaderboard() {
-  const [leaderboard, setLeaderboard] = useState([]);
+const NewLeaderboard = () => {
+  const navigate = useNavigate();
+  const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userRank, setUserRank] = useState(null);
-  const { getUserData } = useUserExperience();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      setCurrentUser(user);
+    }
     fetchLeaderboard();
+
+    // 🔄 CONNEXION WEBSOCKET POUR MISES À JOUR EN TEMPS RÉEL
+    const socket = io("http://localhost:5000", {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      console.log('🔌 [LEADERBOARD] Connecté au serveur WebSocket');
+    });
+
+    // Écouter les mises à jour du leaderboard
+    socket.on('leaderboard_update', (data) => {
+      console.log('📡 [LEADERBOARD] Mise à jour reçue:', data);
+      
+      // Afficher une notification
+      showNotification(data.message);
+      
+      // Recharger le leaderboard automatiquement
+      fetchLeaderboard();
+    });
+
+    socket.on('disconnect', () => {
+      console.log('🔌 [LEADERBOARD] Déconnecté du serveur WebSocket');
+    });
+
+    // ÉCOUTER L'ÉVÉNEMENT DE MONTÉE DE NIVEAU
+    const handleForceRefresh = () => {
+      console.log('🔄 [LEADERBOARD] Rechargement forcé suite à une montée de niveau');
+      fetchLeaderboard();
+    };
+
+    window.addEventListener('forceLeaderboardRefresh', handleForceRefresh);
+
+    // RAFRAÎCHISSEMENT AUTOMATIQUE TOUTES LES 10 SECONDES
+    const autoRefreshInterval = setInterval(() => {
+      console.log('🔄 [LEADERBOARD] Rafraîchissement automatique...');
+      fetchLeaderboard();
+    }, 10000); // 10 secondes
+
+    // Nettoyer la connexion quand le composant est démonté
+    return () => {
+      socket.disconnect();
+      window.removeEventListener('forceLeaderboardRefresh', handleForceRefresh);
+      clearInterval(autoRefreshInterval);
+    };
   }, []);
 
   const fetchLeaderboard = async () => {
     try {
-      setLoading(true);
-      
-      // Générer des données simulées pour le leaderboard
-      const mockUsers = generateMockLeaderboard();
-      
-      // Ajouter l'utilisateur actuel s'il existe
-      const currentUser = getUserData();
-      if (currentUser.totalXp > 0) {
-        const userEntry = {
-          username: localStorage.getItem('username') || 'Vous',
-          level: currentUser.level,
-          totalXp: currentUser.totalXp,
-          title: EXPERIENCE_SYSTEM.getLevelTitle(currentUser.level),
-          isCurrentUser: true,
-          completedQuizzes: currentUser.completedQuizzes?.length || 0,
-          completedLessons: currentUser.completedLessons?.length || 0
-        };
-        mockUsers.push(userEntry);
-      }
-      
-      // Trier par XP total
-      mockUsers.sort((a, b) => b.totalXp - a.totalXp);
-      
-      // Ajouter les rangs
-      const rankedUsers = mockUsers.map((user, index) => ({
-        ...user,
-        rank: index + 1
-      }));
-      
-      // Trouver le rang de l'utilisateur actuel
-      const currentUserRank = rankedUsers.find(user => user.isCurrentUser);
-      setUserRank(currentUserRank?.rank || null);
-      
-      setLeaderboard(rankedUsers.slice(0, 20)); // Top 20
+      const response = await fetch("http://localhost:5000/api/leaderboard");
+      const data = await response.json();
+      console.log("📊 [LEADERBOARD] Données chargées:", data);
+      setLeaderboardData(data);
     } catch (error) {
-      console.error("Erreur lors du chargement du leaderboard:", error);
+      console.error("❌ [LEADERBOARD] Erreur:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockLeaderboard = () => {
-    const mockNames = [
-      "CyberNinja", "H4ck3rPro", "SecMaster", "CryptoWiz", "PentestKing",
-      "FirewallGuru", "SQLHunter", "XSSFinder", "BugBountyHero", "MalwareAnalyst",
-      "SOCExpert", "ForensicAce", "RedTeamer", "BlueDefender", "ThreatHunter",
-      "ZeroDayHunter", "CyberSamurai", "InfoSecNinja", "SecuritySage", "HackerEthic"
-    ];
-    
-    return mockNames.map((name, index) => {
-      const level = Math.max(1, Math.floor(Math.random() * 25) + (20 - index));
-      const baseXp = EXPERIENCE_SYSTEM.getXpForLevel(level) * (level - 1) + 
-                     Math.floor(Math.random() * EXPERIENCE_SYSTEM.getXpForLevel(level));
-      
-      return {
-        username: name,
-        level: level,
-        totalXp: baseXp + Math.floor(Math.random() * 500),
-        title: EXPERIENCE_SYSTEM.getLevelTitle(level),
-        completedQuizzes: Math.floor(Math.random() * 20) + level,
-        completedLessons: Math.floor(Math.random() * 15) + level,
-        isCurrentUser: false
-      };
-    });
+  const showNotification = (message) => {
+    // Créer une notification en haut de l'écran
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-weight: 600;
+      animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = `🎉 ${message}`;
+    document.body.appendChild(notification);
+
+    // Supprimer après 3 secondes
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   };
 
   const getRankIcon = (rank) => {
-    switch(rank) {
-      case 1: return "👑";
-      case 2: return "🥈";
-      case 3: return "🥉";
-      default: return rank <= 10 ? "⭐" : "💫";
-    }
+    if (rank === 1) return "🥇";
+    if (rank === 2) return "🥈";
+    if (rank === 3) return "🥉";
+    return rank;
   };
 
   const getRankClass = (rank) => {
     if (rank === 1) return "rank-gold";
     if (rank === 2) return "rank-silver";
     if (rank === 3) return "rank-bronze";
-    if (rank <= 10) return "rank-top10";
-    return "rank-normal";
+    return "";
   };
+
+  const getLevelColor = (level) => {
+    if (level >= 50) return "#FFD700";
+    if (level >= 30) return "#C0C0C0";
+    if (level >= 10) return "#CD7F32";
+    return "#4ECDC4";
+  };
+
+  const formatXP = (xp) => {
+    if (xp >= 1000000) return `${(xp / 1000000).toFixed(1)}M`;
+    if (xp >= 1000) return `${(xp / 1000).toFixed(1)}K`;
+    return xp;
+  };
+
+  const getPlayerBadge = (level, xp) => {
+    if (xp >= 100000) return { name: "🏆 Legend", color: "#FFD700" };
+    if (xp >= 50000) return { name: "⚔️ Master", color: "#E5E4E2" };
+    if (xp >= 20000) return { name: "🛡️ Expert", color: "#CD7F32" };
+    if (xp >= 5000) return { name: "⚡ Advanced", color: "#4ECDC4" };
+    return { name: "🌟 Beginner", color: "#95E1D3" };
+  };
+
+  const filteredData = leaderboardData.filter(player => 
+    player.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
       <div className="leaderboard-page">
         <NavBar />
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Chargement du classement...</p>
+        <div className="leaderboard-container">
+          <div className="loading-screen">
+            <div className="cyber-loader">
+              <div className="loader-ring"></div>
+              <div className="loader-ring"></div>
+              <div className="loader-ring"></div>
+              <span className="loader-text">LOADING RANKINGS...</span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -113,148 +163,265 @@ function NewLeaderboard() {
   return (
     <div className="leaderboard-page">
       <NavBar />
-      
       <div className="leaderboard-container">
-        <header className="leaderboard-header">
+        <div className="cyber-background">
+          <div className="cyber-grid"></div>
+          <div className="cyber-lines"></div>
+        </div>
+
+        <div className="leaderboard-header">
           <div className="header-content">
-            <h1>🏆 Classement CyberForge</h1>
-            <p>Les meilleurs experts en cybersécurité</p>
+            <div className="title-section">
+              <div className="title-badge">GLOBAL RANKINGS</div>
+              <h1 className="main-title">
+                <span className="title-icon">🏆</span>
+                HALL OF FAME
+                <span className="title-glow"></span>
+              </h1>
+              <p className="subtitle">Elite CyberForge Warriors • Real-Time Leaderboard</p>
+            </div>
             
-            {userRank && (
-              <div className="user-rank-badge">
-                <span className="rank-text">Votre rang :</span>
-                <span className="rank-number">#{userRank}</span>
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="podium-section">
-          {leaderboard.slice(0, 3).map((user, index) => (
-            <div key={user.username} className={`podium-place place-${index + 1}`}>
-              <div className="podium-rank">{getRankIcon(index + 1)}</div>
-              <div className="podium-user">
-                <div className="user-avatar">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-                <div className="user-info">
-                  <div className="username">{user.username}</div>
-                  <div className="level-badge">Niv. {user.level}</div>
-                  <div className="xp-amount">{user.totalXp.toLocaleString()} XP</div>
+            <div className="stats-summary">
+              <div className="stat-card">
+                <div className="stat-icon">👥</div>
+                <div className="stat-info">
+                  <div className="stat-value">{leaderboardData.length}</div>
+                  <div className="stat-label">Total Players</div>
                 </div>
               </div>
-              <div className="user-title">{user.title}</div>
+              <div className="stat-card">
+                <div className="stat-icon">⚡</div>
+                <div className="stat-info">
+                  <div className="stat-value">
+                    {formatXP(leaderboardData[0]?.xp || 0)}
+                  </div>
+                  <div className="stat-label">Top XP</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon">🎯</div>
+                <div className="stat-info">
+                  <div className="stat-value">
+                    {leaderboardData.findIndex(p => p.username === currentUser?.username) + 1 || "-"}
+                  </div>
+                  <div className="stat-label">Your Rank</div>
+                </div>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        <div className="leaderboard-table">
-          <div className="table-header">
-            <div className="header-cell rank-col">Rang</div>
-            <div className="header-cell user-col">Utilisateur</div>
-            <div className="header-cell level-col">Niveau</div>
-            <div className="header-cell xp-col">Expérience</div>
-            <div className="header-cell stats-col">Statistiques</div>
+        <div className="search-section">
+          <div className="search-bar">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Search players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
           </div>
-          
-          <div className="table-body">
-            {leaderboard.map((user, index) => (
-              <div 
-                key={user.username} 
-                className={`table-row ${getRankClass(user.rank)} ${user.isCurrentUser ? 'current-user' : ''}`}
-              >
-                <div className="table-cell rank-col">
-                  <span className="rank-icon">{getRankIcon(user.rank)}</span>
-                  <span className="rank-number">#{user.rank}</span>
-                </div>
-                
-                <div className="table-cell user-col">
-                  <div className="user-avatar">
-                    {user.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="user-details">
-                    <div className="username">
-                      {user.username}
-                      {user.isCurrentUser && <span className="you-badge">Vous</span>}
+        </div>
+
+        {filteredData.length >= 3 && (
+          <div className="podium-section">
+            <div className="podium-container">
+              <div className="podium-position second-place">
+                <div className="podium-card">
+                  <div className="rank-medal">🥈</div>
+                  <div className="player-avatar-container">
+                    <div className="avatar-glow silver"></div>
+                    <div className="player-avatar silver">
+                      {filteredData[1].username[0].toUpperCase()}
                     </div>
-                    <div className="user-title">{user.title}</div>
-                  </div>
-                </div>
-                
-                <div className="table-cell level-col">
-                  <div className="level-display">
-                    <span className="level-number">{user.level}</span>
-                    <div className="level-progress">
-                      <div 
-                        className="progress-fill" 
-                        style={{ 
-                          width: `${EXPERIENCE_SYSTEM.getLevelProgress(user.totalXp)}%` 
-                        }}
-                      ></div>
+                    <div className="level-badge" style={{ background: getLevelColor(filteredData[1].level) }}>
+                      Lv {filteredData[1].level}
                     </div>
                   </div>
-                </div>
-                
-                <div className="table-cell xp-col">
-                  <div className="xp-display">
-                    <span className="xp-amount">{user.totalXp.toLocaleString()}</span>
-                    <span className="xp-label">XP</span>
+                  <h3 className="player-username">{filteredData[1].username}</h3>
+                  <div className="player-badge" style={{ color: getPlayerBadge(filteredData[1].level, filteredData[1].xp).color }}>
+                    {getPlayerBadge(filteredData[1].level, filteredData[1].xp).name}
                   </div>
-                </div>
-                
-                <div className="table-cell stats-col">
-                  <div className="stats">
+                  <div className="player-stats">
                     <div className="stat-item">
-                      <span className="stat-icon">🎯</span>
-                      <span className="stat-value">{user.completedQuizzes}</span>
+                      <span className="stat-label">XP</span>
+                      <span className="stat-value">{formatXP(filteredData[1].xp)}</span>
                     </div>
+                    <div className="stat-divider"></div>
                     <div className="stat-item">
-                      <span className="stat-icon">📚</span>
-                      <span className="stat-value">{user.completedLessons}</span>
+                      <span className="stat-label">Score</span>
+                      <span className="stat-value">{formatXP(filteredData[1].score)}</span>
                     </div>
                   </div>
                 </div>
+                <div className="podium-base second">
+                  <span className="base-rank">#2</span>
+                </div>
               </div>
-            ))}
+
+              <div className="podium-position first-place">
+                <div className="podium-card champion">
+                  <div className="champion-crown">👑</div>
+                  <div className="rank-medal">🥇</div>
+                  <div className="player-avatar-container">
+                    <div className="avatar-glow gold"></div>
+                    <div className="player-avatar gold">
+                      {filteredData[0].username[0].toUpperCase()}
+                    </div>
+                    <div className="level-badge champion-level" style={{ background: getLevelColor(filteredData[0].level) }}>
+                      Lv {filteredData[0].level}
+                    </div>
+                  </div>
+                  <h3 className="player-username champion-name">{filteredData[0].username}</h3>
+                  <div className="player-badge champion-badge" style={{ color: getPlayerBadge(filteredData[0].level, filteredData[0].xp).color }}>
+                    {getPlayerBadge(filteredData[0].level, filteredData[0].xp).name}
+                  </div>
+                  <div className="player-stats">
+                    <div className="stat-item">
+                      <span className="stat-label">XP</span>
+                      <span className="stat-value">{formatXP(filteredData[0].xp)}</span>
+                    </div>
+                    <div className="stat-divider"></div>
+                    <div className="stat-item">
+                      <span className="stat-label">Score</span>
+                      <span className="stat-value">{formatXP(filteredData[0].score)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="podium-base first">
+                  <span className="base-rank">#1</span>
+                </div>
+              </div>
+
+              <div className="podium-position third-place">
+                <div className="podium-card">
+                  <div className="rank-medal">🥉</div>
+                  <div className="player-avatar-container">
+                    <div className="avatar-glow bronze"></div>
+                    <div className="player-avatar bronze">
+                      {filteredData[2].username[0].toUpperCase()}
+                    </div>
+                    <div className="level-badge" style={{ background: getLevelColor(filteredData[2].level) }}>
+                      Lv {filteredData[2].level}
+                    </div>
+                  </div>
+                  <h3 className="player-username">{filteredData[2].username}</h3>
+                  <div className="player-badge" style={{ color: getPlayerBadge(filteredData[2].level, filteredData[2].xp).color }}>
+                    {getPlayerBadge(filteredData[2].level, filteredData[2].xp).name}
+                  </div>
+                  <div className="player-stats">
+                    <div className="stat-item">
+                      <span className="stat-label">XP</span>
+                      <span className="stat-value">{formatXP(filteredData[2].xp)}</span>
+                    </div>
+                    <div className="stat-divider"></div>
+                    <div className="stat-item">
+                      <span className="stat-label">Score</span>
+                      <span className="stat-value">{formatXP(filteredData[2].score)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="podium-base third">
+                  <span className="base-rank">#3</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="ranking-table-section">
+          <div className="section-title">
+            <h2>Complete Rankings</h2>
+            <div className="title-line"></div>
+          </div>
+
+          <div className="ranking-table">
+            <div className="table-header">
+              <div className="th rank-col">Rank</div>
+              <div className="th player-col">Player</div>
+              <div className="th badge-col">Badge</div>
+              <div className="th level-col">Level</div>
+              <div className="th xp-col">Experience</div>
+              <div className="th score-col">Score</div>
+            </div>
+
+            <div className="table-body">
+              {filteredData.map((player, index) => {
+                const isCurrentUser = currentUser && player.username === currentUser.username;
+                const badge = getPlayerBadge(player.level, player.xp);
+                
+                return (
+                  <div
+                    key={player.username}
+                    className={`table-row ${isCurrentUser ? "current-user" : ""} ${getRankClass(index + 1)}`}
+                  >
+                    <div className="td rank-col">
+                      <div className="rank-display">
+                        <span className="rank-number">{getRankIcon(index + 1)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="td player-col">
+                      <div className="player-cell">
+                        <div
+                          className="mini-avatar"
+                          style={{
+                            background: `linear-gradient(135deg, ${getLevelColor(player.level)}, #667eea)`,
+                          }}
+                        >
+                          {player.username[0].toUpperCase()}
+                        </div>
+                        <div className="player-info">
+                          <span className="username">
+                            {player.username}
+                            {isCurrentUser && <span className="you-tag">YOU</span>}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="td badge-col">
+                      <span className="badge-tag" style={{ color: badge.color }}>
+                        {badge.name}
+                      </span>
+                    </div>
+
+                    <div className="td level-col">
+                      <span className="level-display" style={{ color: getLevelColor(player.level) }}>
+                        Lv {player.level}
+                      </span>
+                    </div>
+
+                    <div className="td xp-col">
+                      <div className="xp-display">
+                        <span className="xp-amount">{formatXP(player.xp)}</span>
+                        <span className="xp-label">XP</span>
+                      </div>
+                    </div>
+
+                    <div className="td score-col">
+                      <div className="score-display">
+                        {formatXP(player.score)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="leaderboard-info">
-          <h3>💡 Comment gravir le classement</h3>
-          <div className="tips-grid">
-            <div className="tip-card">
-              <span className="tip-icon">🎯</span>
-              <div className="tip-content">
-                <h4>Réussir les quiz</h4>
-                <p>+50 XP par bonne réponse</p>
-              </div>
-            </div>
-            <div className="tip-card">
-              <span className="tip-icon">🏆</span>
-              <div className="tip-content">
-                <h4>Quiz parfait</h4>
-                <p>+200 XP de bonus</p>
-              </div>
-            </div>
-            <div className="tip-card">
-              <span className="tip-icon">📚</span>
-              <div className="tip-content">
-                <h4>Terminer les cours</h4>
-                <p>+100 XP par leçon</p>
-              </div>
-            </div>
-            <div className="tip-card">
-              <span className="tip-icon">🔥</span>
-              <div className="tip-content">
-                <h4>Rester actif</h4>
-                <p>Pratiquez régulièrement</p>
-              </div>
-            </div>
+        {filteredData.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">🔍</div>
+            <h2>No Players Found</h2>
+            <p>Try adjusting your search term</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
-}
+};
 
 export default NewLeaderboard;

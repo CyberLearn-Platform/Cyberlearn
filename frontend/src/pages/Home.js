@@ -45,15 +45,20 @@ function Home() {
       if (event.detail) {
         // Données depuis l'événement custom
         const levelData = event.detail;
+        const currentLevelXp = levelData.currentLevelXp || 0;
+        const xpNeeded = levelData.xpToNextLevel || 100;
+        const totalXpForLevel = currentLevelXp + xpNeeded; // Total XP nécessaire pour ce niveau
+        const progressPercent = totalXpForLevel > 0 ? Math.floor((currentLevelXp / totalXpForLevel) * 100) : 0;
+        
         setUserProgress({
           current_level: levelData.level || 1,
-          xp_current: levelData.currentLevelXp || 0,
-          xp_needed: levelData.xpToNextLevel || 100,
-          progress_percent: Math.floor(((levelData.currentLevelXp || 0) / (levelData.xpToNextLevel || 100)) * 100),
+          xp_current: currentLevelXp,
+          xp_needed: xpNeeded,
+          progress_percent: progressPercent,
           streak: levelData.streak || 0,
           badges: levelData.badges || []
         });
-        console.log('🔄 Home synchronized with level:', levelData.level);
+        console.log('🔄 Home synchronized with level:', levelData.level, 'Progress:', progressPercent + '%');
       } else {
         // Relire depuis localStorage
         fetchUserProgress();
@@ -63,15 +68,20 @@ function Home() {
     // Écouter aussi BroadcastChannel pour synchronisation cross-tab
     const handleBroadcast = (event) => {
       const levelData = event.data;
+      const currentLevelXp = levelData.currentLevelXp || 0;
+      const xpNeeded = levelData.xpToNextLevel || 100;
+      const totalXpForLevel = currentLevelXp + xpNeeded;
+      const progressPercent = totalXpForLevel > 0 ? Math.floor((currentLevelXp / totalXpForLevel) * 100) : 0;
+      
       setUserProgress({
         current_level: levelData.level || 1,
-        xp_current: levelData.currentLevelXp || 0,
-        xp_needed: levelData.xpToNextLevel || 100,
-        progress_percent: Math.floor(((levelData.currentLevelXp || 0) / (levelData.xpToNextLevel || 100)) * 100),
+        xp_current: currentLevelXp,
+        xp_needed: xpNeeded,
+        progress_percent: progressPercent,
         streak: levelData.streak || 0,
         badges: levelData.badges || []
       });
-      console.log('📡 Home synchronized via broadcast:', levelData.level);
+      console.log('📡 Home synchronized via broadcast:', levelData.level, 'Progress:', progressPercent + '%');
     };
 
     const broadcastChannel = new BroadcastChannel('levelSync');
@@ -102,14 +112,20 @@ function Home() {
       const localUserData = JSON.parse(localStorage.getItem('userExperience') || '{}');
       if (localUserData.level) {
         // Utiliser les données locales du système de quiz
+        const currentLevelXp = localUserData.currentLevelXp || 0;
+        const xpNeeded = localUserData.xpToNextLevel || 100;
+        const totalXpForLevel = currentLevelXp + xpNeeded;
+        const progressPercent = totalXpForLevel > 0 ? Math.floor((currentLevelXp / totalXpForLevel) * 100) : 0;
+        
         setUserProgress({
           current_level: localUserData.level,
-          xp_current: localUserData.currentLevelXp || 0,
-          xp_needed: localUserData.xpToNextLevel || 100,
-          progress_percent: Math.floor(((localUserData.currentLevelXp || 0) / (localUserData.xpToNextLevel || 100)) * 100),
+          xp_current: currentLevelXp,
+          xp_needed: xpNeeded,
+          progress_percent: progressPercent,
           streak: localUserData.streak || 0,
           badges: localUserData.badges || []
         });
+        console.log('📊 [HOME] Progress bar:', progressPercent + '%', 'XP:', currentLevelXp, '/', totalXpForLevel);
         return;
       }
 
@@ -215,11 +231,11 @@ function Home() {
       setModules({
         web_security: {
           id: "web_security",
-          title: "Sécurité Web",
-          description: "Apprenez les bases de la sécurité web et les vulnérabilités communes",
+          title: moduleTranslations.web_security?.title || "Sécurité Web",
+          description: moduleTranslations.web_security?.description || "Apprenez les bases de la sécurité web et les vulnérabilités communes",
           icon: "🌐",
-          difficulty: "Débutant",
-          duration: "45 min",
+          difficulty: t('beginner'),
+          duration: `45 ${t('minutes')}`,
           unlocked: true,
           completed: false,
           level_requirement: 1,
@@ -227,11 +243,11 @@ function Home() {
         },
         cryptography: {
           id: "cryptography", 
-          title: "Cryptographie",
-          description: "Maîtrisez les concepts fondamentaux de la cryptographie moderne",
+          title: moduleTranslations.cryptography?.title || "Cryptographie",
+          description: moduleTranslations.cryptography?.description || "Maîtrisez les concepts fondamentaux de la cryptographie moderne",
           icon: "🔐",
-          difficulty: "Intermédiaire",
-          duration: "60 min",
+          difficulty: t('intermediate'),
+          duration: `60 ${t('minutes')}`,
           unlocked: false,
           completed: false,
           level_requirement: 2,
@@ -240,11 +256,11 @@ function Home() {
         },
         ethical_hacking: {
           id: "ethical_hacking",
-          title: "Hacking Éthique", 
-          description: "Apprenez les techniques de pentesting",
+          title: moduleTranslations.ethical_hacking?.title || "Hacking Éthique", 
+          description: moduleTranslations.ethical_hacking?.description || "Apprenez les techniques de pentesting",
           icon: "🎯",
-          difficulty: "Avancé",
-          duration: "75 min",
+          difficulty: t('advanced'),
+          duration: `75 ${t('minutes')}`,
           unlocked: false,
           completed: false,
           level_requirement: 3,
@@ -253,11 +269,11 @@ function Home() {
         },
         incident_response: {
           id: "incident_response",
-          title: "Réponse aux Incidents",
-          description: "Gérez efficacement les incidents",
+          title: moduleTranslations.incident_response?.title || "Réponse aux Incidents",
+          description: moduleTranslations.incident_response?.description || "Gérez efficacement les incidents",
           icon: "🚨", 
-          difficulty: "Avancé",
-          duration: "50 min",
+          difficulty: t('advanced'),
+          duration: `50 ${t('minutes')}`,
           unlocked: false,
           completed: false,
           level_requirement: 4,
@@ -270,6 +286,22 @@ function Home() {
 
   return (
     <div className="home-page">
+      {/* Particules animées de fond */}
+      <div className="animated-particles">
+        {[...Array(20)].map((_, i) => (
+          <div 
+            key={i} 
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${5 + Math.random() * 10}s`
+            }}
+          />
+        ))}
+      </div>
+      
       <NavBar />
 
       {/* Hero Section */}

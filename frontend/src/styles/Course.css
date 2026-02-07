@@ -63,12 +63,16 @@
   border-radius: 15px;
   font-size: 0.8rem;
   font-weight: bold;
+  box-shadow: none !important; /* Force la suppression de toute ombre */
+  animation: none !important; /* Supprime toute animation */
 }
 
 .difficulty {
-  background: rgba(255, 152, 0, 0.2);
-  color: #ff9800;
-  border: 1px solid #ff9800;
+  background: rgba(255, 152, 0, 0.1) !important; /* Encore plus subtil */
+  color: #ff9800 !important;
+  border: 1px solid rgba(255, 152, 0, 0.3) !important; /* Bordure très subtile */
+  text-shadow: none !important; /* Pas d'ombre de texte */
+  filter: none !important; /* Pas de filtre */
 }
 
 .duration {
