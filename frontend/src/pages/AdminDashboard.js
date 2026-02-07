@@ -34,7 +34,11 @@ function AdminDashboard() {
   const [currentLesson, setCurrentLesson] = useState({
     id: 1,
     title: '',
-    content: ''
+    content: '',
+    introduction: '',
+    fundamentals: '',
+    advanced: '',
+    practice: ''
   });
 
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -143,7 +147,9 @@ function AdminDashboard() {
   const handleCreateModule = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:5000/api/admin/modules', {
+      
+      // 1. Créer le module
+      const moduleResponse = await fetch('http://localhost:5000/api/admin/modules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,8 +158,33 @@ function AdminDashboard() {
         body: JSON.stringify(moduleForm)
       });
 
-      if (response.ok) {
-        alert('✅ Module créé avec succès !');
+      if (moduleResponse.ok) {
+        // 2. Créer automatiquement un quiz vide associé
+        const quizData = {
+          id: moduleForm.id, // Même ID que le module
+          title: moduleForm.title,
+          icon: moduleForm.icon,
+          difficulty: moduleForm.difficulty,
+          questions: [] // Quiz vide, à remplir plus tard
+        };
+        
+        const quizResponse = await fetch('http://localhost:5000/api/admin/quizzes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(quizData)
+        });
+
+        if (quizResponse.ok) {
+          // Recharger les quiz AVANT d'afficher le message
+          await fetchQuizzes();
+          alert('✅ Module et quiz créés avec succès ! Vous pouvez maintenant ajouter des questions au quiz en cliquant sur le bouton "🎯 Quiz".');
+        } else {
+          alert('✅ Module créé avec succès ! ⚠️ Attention: Le quiz n\'a pas pu être créé automatiquement.');
+        }
+        
         setShowModuleForm(false);
         setModuleForm({
           id: '',
@@ -167,7 +198,7 @@ function AdminDashboard() {
         fetchModules();
         fetchStats();
       } else {
-        const error = await response.json();
+        const error = await moduleResponse.json();
         alert('❌ Erreur: ' + error.error);
       }
     } catch (error) {
@@ -260,12 +291,48 @@ function AdminDashboard() {
   };
 
   const addLesson = () => {
-    if (currentLesson.title && currentLesson.content) {
+    if (currentLesson.title) {
+      // Construire le contenu à partir des sections
+      let fullContent = '';
+      
+      if (currentLesson.introduction) {
+        fullContent += `## 📖 Introduction\n\n${currentLesson.introduction}\n\n`;
+      }
+      
+      if (currentLesson.fundamentals) {
+        fullContent += `## 🧠 Concepts fondamentaux\n\n${currentLesson.fundamentals}\n\n`;
+      }
+      
+      if (currentLesson.advanced) {
+        fullContent += `## ⚡ Techniques avancées\n\n${currentLesson.advanced}\n\n`;
+      }
+      
+      if (currentLesson.practice) {
+        fullContent += `## 🎯 Pratique & Résumé\n\n${currentLesson.practice}\n\n`;
+      }
+      
+      const lessonToAdd = {
+        id: moduleForm.lessons.length + 1,
+        title: currentLesson.title,
+        content: fullContent.trim()
+      };
+      
       setModuleForm({
         ...moduleForm,
-        lessons: [...moduleForm.lessons, { ...currentLesson, id: moduleForm.lessons.length + 1 }]
+        lessons: [...moduleForm.lessons, lessonToAdd]
       });
-      setCurrentLesson({ id: moduleForm.lessons.length + 2, title: '', content: '' });
+      
+      setCurrentLesson({ 
+        id: moduleForm.lessons.length + 2, 
+        title: '', 
+        content: '',
+        introduction: '',
+        fundamentals: '',
+        advanced: '',
+        practice: ''
+      });
+    } else {
+      alert('⚠️ Veuillez remplir au moins le titre de la leçon !');
     }
   };
 
@@ -326,6 +393,7 @@ function AdminDashboard() {
       ...module,
       lessons: module.lessons || []
     });
+    setCurrentLesson({ id: (module.lessons || []).length + 1, title: '', content: '', introduction: '', fundamentals: '', advanced: '', practice: '' });
     setEditingModule(module.id);
     setShowModuleForm(true);
   };
@@ -538,7 +606,20 @@ function AdminDashboard() {
               <h2>📈 Statistiques Générales</h2>
               <p>Gérez votre plateforme d'apprentissage en cybersécurité</p>
               <div className="quick-actions">
-                <button className="action-btn" onClick={() => { setActiveTab('modules'); setShowModuleForm(true); }}>
+                <button className="action-btn" onClick={() => { 
+                  setActiveTab('modules'); 
+                  setShowModuleForm(true); 
+                  setCurrentLesson({ id: 1, title: '', content: '', introduction: '', fundamentals: '', advanced: '', practice: '' });
+                  setModuleForm({
+                    id: '',
+                    title: '',
+                    description: '',
+                    icon: '📚',
+                    difficulty: 'Débutant',
+                    duration: '30 min',
+                    lessons: []
+                  });
+                }}>
                   ➕ Créer un Module
                 </button>
                 <button className="action-btn" onClick={() => { setActiveTab('quizzes'); setShowQuizForm(true); }}>
@@ -552,7 +633,19 @@ function AdminDashboard() {
             <div className="modules-section">
               <div className="section-header">
                 <h2>📚 Gestion des Modules</h2>
-                <button className="create-btn" onClick={() => setShowModuleForm(true)}>
+                <button className="create-btn" onClick={() => {
+                  setShowModuleForm(true);
+                  setCurrentLesson({ id: 1, title: '', content: '', introduction: '', fundamentals: '', advanced: '', practice: '' });
+                  setModuleForm({
+                    id: '',
+                    title: '',
+                    description: '',
+                    icon: '📚',
+                    difficulty: 'Débutant',
+                    duration: '30 min',
+                    lessons: []
+                  });
+                }}>
                   ➕ Nouveau Module
                 </button>
               </div>
@@ -562,7 +655,11 @@ function AdminDashboard() {
                   <div className="form-content">
                     <div className="form-header">
                       <h3>{editingModule ? '✏️ Modifier le Module' : '➕ Créer un Nouveau Module'}</h3>
-                      <button className="close-btn" onClick={() => { setShowModuleForm(false); setEditingModule(null); }}>✕</button>
+                      <button className="close-btn" onClick={() => { 
+                        setShowModuleForm(false); 
+                        setEditingModule(null);
+                        setCurrentLesson({ id: 1, title: '', content: '', introduction: '', fundamentals: '', advanced: '', practice: '' });
+                      }}>✕</button>
                     </div>
 
                     <div className="form-body">
@@ -645,26 +742,102 @@ function AdminDashboard() {
                         ))}
 
                         <div className="add-lesson-form">
-                          <h5>Ajouter une Leçon</h5>
-                          <input
-                            type="text"
-                            value={currentLesson.title}
-                            onChange={(e) => setCurrentLesson({...currentLesson, title: e.target.value})}
-                            placeholder="Titre de la leçon"
-                          />
-                          <textarea
-                            value={currentLesson.content}
-                            onChange={(e) => setCurrentLesson({...currentLesson, content: e.target.value})}
-                            placeholder="Contenu de la leçon (Markdown supporté)"
-                            rows="6"
-                          />
-                          <button className="add-btn" onClick={addLesson}>➕ Ajouter la Leçon</button>
+                          <h5>✏️ Créer une Nouvelle Leçon</h5>
+                          
+                          <div className="lesson-title-input">
+                            <label>📝 Titre de la leçon *</label>
+                            <input
+                              type="text"
+                              value={currentLesson.title}
+                              onChange={(e) => setCurrentLesson({...currentLesson, title: e.target.value})}
+                              placeholder="Ex: Introduction à la sécurité web"
+                              className="title-input"
+                            />
+                          </div>
+
+                          <div className="lesson-sections-container">
+                            {/* Section Introduction */}
+                            <div className="lesson-section-card">
+                              <div className="section-header-card">
+                                <span className="section-icon">📖</span>
+                                <h6>Introduction</h6>
+                                <span className="section-badge">Optionnel</span>
+                              </div>
+                              <textarea
+                                value={currentLesson.introduction}
+                                onChange={(e) => setCurrentLesson({...currentLesson, introduction: e.target.value})}
+                                placeholder="Présentez le sujet de la leçon, son contexte et ses objectifs..."
+                                rows="4"
+                                className="section-textarea"
+                              />
+                            </div>
+
+                            {/* Section Concepts fondamentaux */}
+                            <div className="lesson-section-card">
+                              <div className="section-header-card">
+                                <span className="section-icon">🧠</span>
+                                <h6>Concepts fondamentaux</h6>
+                                <span className="section-badge">Optionnel</span>
+                              </div>
+                              <textarea
+                                value={currentLesson.fundamentals}
+                                onChange={(e) => setCurrentLesson({...currentLesson, fundamentals: e.target.value})}
+                                placeholder="Expliquez les concepts de base, définitions et principes clés..."
+                                rows="4"
+                                className="section-textarea"
+                              />
+                            </div>
+
+                            {/* Section Techniques avancées */}
+                            <div className="lesson-section-card">
+                              <div className="section-header-card">
+                                <span className="section-icon">⚡</span>
+                                <h6>Techniques avancées</h6>
+                                <span className="section-badge">Optionnel</span>
+                              </div>
+                              <textarea
+                                value={currentLesson.advanced}
+                                onChange={(e) => setCurrentLesson({...currentLesson, advanced: e.target.value})}
+                                placeholder="Détaillez les techniques avancées, exemples pratiques et cas d'usage..."
+                                rows="4"
+                                className="section-textarea"
+                              />
+                            </div>
+
+                            {/* Section Pratique & Résumé */}
+                            <div className="lesson-section-card">
+                              <div className="section-header-card">
+                                <span className="section-icon">🎯</span>
+                                <h6>Pratique & Résumé</h6>
+                                <span className="section-badge">Optionnel</span>
+                              </div>
+                              <textarea
+                                value={currentLesson.practice}
+                                onChange={(e) => setCurrentLesson({...currentLesson, practice: e.target.value})}
+                                placeholder="Résumez les points clés et proposez des exercices pratiques..."
+                                rows="4"
+                                className="section-textarea"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="lesson-help-text">
+                            💡 <strong>Astuce :</strong> Remplissez uniquement les sections nécessaires. Vous pouvez laisser certaines sections vides.
+                          </div>
+                          
+                          <button className="add-btn" onClick={addLesson}>
+                            ✅ Ajouter cette Leçon au Module
+                          </button>
                         </div>
                       </div>
                     </div>
 
                     <div className="form-footer">
-                      <button className="cancel-btn" onClick={() => { setShowModuleForm(false); setEditingModule(null); }}>
+                      <button className="cancel-btn" onClick={() => { 
+                        setShowModuleForm(false); 
+                        setEditingModule(null);
+                        setCurrentLesson({ id: 1, title: '', content: '', introduction: '', fundamentals: '', advanced: '', practice: '' });
+                      }}>
                         Annuler
                       </button>
                       <button className="submit-btn" onClick={editingModule ? handleUpdateModule : handleCreateModule}>
@@ -689,6 +862,32 @@ function AdminDashboard() {
                     </div>
                     <div className="module-actions">
                       <button className="edit-btn" onClick={() => editModule(module)}>✏️ Modifier</button>
+                      <button 
+                        className="quiz-btn" 
+                        onClick={() => {
+                          // Chercher le quiz correspondant au module
+                          const correspondingQuiz = quizzes.find(q => q.id === module.id);
+                          if (correspondingQuiz) {
+                            // Quiz existe, l'éditer
+                            editQuiz(correspondingQuiz);
+                            setActiveTab('quizzes');
+                          } else {
+                            // Quiz n'existe pas, ouvrir le formulaire pré-rempli
+                            setQuizForm({
+                              id: module.id,
+                              title: module.title,
+                              icon: module.icon,
+                              difficulty: module.difficulty,
+                              questions: []
+                            });
+                            setActiveTab('quizzes');
+                            setShowQuizForm(true);
+                          }
+                        }}
+                        title="Éditer le quiz de ce module"
+                      >
+                        🎯 Quiz
+                      </button>
                       <button className="delete-btn" onClick={() => handleDeleteModule(module.id)}>🗑️ Supprimer</button>
                     </div>
                   </div>

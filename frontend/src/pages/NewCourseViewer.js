@@ -28,7 +28,7 @@ function NewCourseViewer() {
         // Diviser le contenu en 4 pages
         const pages = createPages(data);
         setModule({ ...data, pages });
-        setProgress(25); // Première page = 25%
+        setProgress((1 / pages.length) * 100); // Calculer le progrès en fonction du nombre de pages
       } else {
         setError("Module non trouvé");
       }
@@ -42,60 +42,102 @@ function NewCourseViewer() {
 
   const createPages = (moduleData) => {
     const content = moduleData.lessons[0].content;
-    const sections = content.split(/(?=## )/);
     
-    return [
-      {
-        title: t('introduction'),
-        content: sections[0] + (sections[1] || ""),
-        icon: "📚"
-      },
-      {
-        title: t('fundamentalConcepts'), 
-        content: sections[2] || sections[1] || "Contenu des concepts...",
+    // Diviser le contenu par sections (chaque section commence par ##)
+    const sections = content.split(/(?=## )/g).filter(s => s.trim());
+    
+    console.log('📚 Sections détectées:', sections);
+    
+    // Créer les pages pour chaque section
+    const pages = [];
+    
+    // Page 1: Introduction (📖)
+    const introSection = sections.find(s => s.includes('📖'));
+    if (introSection) {
+      pages.push({
+        title: 'Introduction',
+        content: introSection,
+        icon: "📖"
+      });
+    }
+    
+    // Page 2: Concepts fondamentaux (🧠)
+    const fundamentalsSection = sections.find(s => s.includes('🧠'));
+    if (fundamentalsSection) {
+      pages.push({
+        title: 'Concepts fondamentaux',
+        content: fundamentalsSection,
         icon: "🧠"
-      },
-      {
-        title: t('advancedTechniques'),
-        content: sections[3] || "Techniques et méthodes avancées...",
+      });
+    }
+    
+    // Page 3: Techniques avancées (⚡)
+    const advancedSection = sections.find(s => s.includes('⚡'));
+    if (advancedSection) {
+      pages.push({
+        title: 'Techniques avancées',
+        content: advancedSection,
         icon: "⚡"
-      },
-      {
-        title: t('practiceSummary'),
-        content: sections[4] || `
-# ${t('practiceSummary')}
-
-Ce module vous a permis d'apprendre :
-
-- Les concepts de base
-- Les techniques essentielles
-- Les bonnes pratiques
-- Les applications pratiques
-
-Vous êtes maintenant prêt pour le quiz !
-        `,
+      });
+    }
+    
+    // Page 4: Pratique & Résumé (🎯)
+    const practiceSection = sections.find(s => s.includes('🎯'));
+    if (practiceSection) {
+      pages.push({
+        title: 'Pratique & Résumé',
+        content: practiceSection,
         icon: "🎯"
-      }
-    ];
+      });
+    }
+    
+    // Si aucune section n'a été trouvée, créer des pages par défaut
+    if (pages.length === 0) {
+      return [
+        {
+          title: 'Introduction',
+          content: content,
+          icon: "📖"
+        },
+        {
+          title: 'Concepts fondamentaux',
+          content: 'Contenu en cours de préparation...',
+          icon: "🧠"
+        },
+        {
+          title: 'Techniques avancées',
+          content: 'Contenu en cours de préparation...',
+          icon: "⚡"
+        },
+        {
+          title: 'Pratique & Résumé',
+          content: 'Contenu en cours de préparation...',
+          icon: "🎯"
+        }
+      ];
+    }
+    
+    console.log('📄 Pages créées:', pages.length);
+    return pages;
   };
 
   const nextPage = () => {
-    if (currentPage < 3) {
+    if (module && currentPage < module.pages.length - 1) {
       setCurrentPage(currentPage + 1);
-      setProgress((currentPage + 2) * 25);
+      setProgress(((currentPage + 2) / module.pages.length) * 100);
     }
   };
 
   const prevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
-      setProgress((currentPage) * 25);
+      setProgress(((currentPage) / module.pages.length) * 100);
     }
   };
 
   const goToPage = (pageIndex) => {
     setCurrentPage(pageIndex);
-    setProgress((pageIndex + 1) * 25);
+    setProgress(((pageIndex + 1) / module.pages.length) * 100);
   };
 
   const goToQuiz = () => {
@@ -206,7 +248,7 @@ Vous êtes maintenant prêt pour le quiz !
               <h2>{currentPageData.title}</h2>
             </div>
             <div className="page-counter">
-              {t('page')} {currentPage + 1} / 4
+              {t('page')} {currentPage + 1} / {module.pages.length}
             </div>
           </div>
 
@@ -228,7 +270,7 @@ Vous êtes maintenant prêt pour le quiz !
               </button>
               
               <div className="page-dots">
-                {[0, 1, 2, 3].map(pageIndex => (
+                {module.pages.map((_, pageIndex) => (
                   <button
                     key={pageIndex}
                     onClick={() => goToPage(pageIndex)}
@@ -237,7 +279,7 @@ Vous êtes maintenant prêt pour le quiz !
                 ))}
               </div>
               
-              {currentPage < 3 ? (
+              {currentPage < module.pages.length - 1 ? (
                 <button 
                   onClick={nextPage}
                   className="nav-btn next-btn"

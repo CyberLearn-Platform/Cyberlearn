@@ -4,7 +4,7 @@
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
   color: white;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding-top: 100px; /* Espacement pour éviter la navbar */
+  padding-top: 0; /* Pas d'espacement - géré par quiz-container */
 }
 
 .quiz-loading, .quiz-error {
@@ -51,7 +51,8 @@
 .quiz-container {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 0 1rem 2rem 1rem;
+  margin-top: -70px; /* Compense la hauteur de la NavBar */
 }
 
 /* Header du quiz */
@@ -61,6 +62,7 @@
   border-radius: 20px;
   padding: 2rem;
   margin-bottom: 2rem;
+  margin-top: 0.5rem; /* Petit espace sous la NavBar */
   border: 1px solid rgba(59, 130, 246, 0.3);
   box-shadow: 0 20px 40px rgba(59, 130, 246, 0.1);
 }

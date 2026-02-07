@@ -205,7 +205,8 @@ export const AuthProvider = ({ children }) => {
           totalXp: backendUserData.experience,
           level: backendUserData.level,
           completedQuizzes: backendUserData.completed_quizzes || [],
-          completedLessons: backendUserData.completed_modules || []
+          completedLessons: backendUserData.completed_modules || [],
+          is_admin: backendUserData.is_admin || userData.is_admin || false
         };
         
         localStorage.setItem('userProgress', JSON.stringify(userProgressData));

@@ -186,6 +186,25 @@ function Home() {
       const userData = JSON.parse(localStorage.getItem('userProgress') || '{}');
       const completedQuizzes = userData.completedQuizzes || [];
       
+      // 🔐 Vérifier si l'utilisateur est admin (depuis la base de données via API)
+      const token = localStorage.getItem('auth_token');
+      let isAdmin = false;
+      
+      if (token) {
+        try {
+          const userResponse = await fetch('http://localhost:5000/api/user/data', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            isAdmin = userData.is_admin || false;
+            console.log('🔑 [HOME] Utilisateur admin:', isAdmin);
+          }
+        } catch (err) {
+          console.error('Erreur vérification admin:', err);
+        }
+      }
+      
       // Définir la carte des prérequis
       const prerequisiteMap = {
         'cryptography': 'web_security',
@@ -200,11 +219,16 @@ function Home() {
         const isCompleted = completedQuizzes.some(quiz => quiz.id === module.id);
         let isUnlocked = module.id === 'web_security'; // Premier module toujours déverrouillé
         
-        // Vérifier les prérequis
-        if (module.id !== 'web_security') {
-          const prerequisite = prerequisiteMap[module.id];
-          if (prerequisite) {
-            isUnlocked = completedQuizzes.some(quiz => quiz.id === prerequisite);
+        // 🔓 SI ADMIN : Déverrouiller TOUS les modules
+        if (isAdmin) {
+          isUnlocked = true;
+        } else {
+          // 🔒 Utilisateurs normaux : Vérifier les prérequis
+          if (module.id !== 'web_security') {
+            const prerequisite = prerequisiteMap[module.id];
+            if (prerequisite) {
+              isUnlocked = completedQuizzes.some(quiz => quiz.id === prerequisite);
+            }
           }
         }
         
@@ -228,6 +252,26 @@ function Home() {
     } catch (error) {
       console.error("Failed to fetch modules:", error);
       // Fallback avec des données par défaut si l'API échoue
+      const userData = JSON.parse(localStorage.getItem('userProgress') || '{}');
+      
+      // 🔐 Vérifier si l'utilisateur est admin
+      const token = localStorage.getItem('auth_token');
+      let isAdmin = false;
+      
+      if (token) {
+        try {
+          const userResponse = await fetch('http://localhost:5000/api/user/data', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (userResponse.ok) {
+            const userDataFromAPI = await userResponse.json();
+            isAdmin = userDataFromAPI.is_admin || false;
+          }
+        } catch (err) {
+          console.error('Erreur vérification admin:', err);
+        }
+      }
+      
       setModules({
         web_security: {
           id: "web_security",
@@ -248,7 +292,7 @@ function Home() {
           icon: "🔐",
           difficulty: t('intermediate'),
           duration: `60 ${t('minutes')}`,
-          unlocked: false,
+          unlocked: isAdmin ? true : false,
           completed: false,
           level_requirement: 2,
           xp_reward: 150,
@@ -261,7 +305,7 @@ function Home() {
           icon: "🎯",
           difficulty: t('advanced'),
           duration: `75 ${t('minutes')}`,
-          unlocked: false,
+          unlocked: isAdmin ? true : false,
           completed: false,
           level_requirement: 3,
           xp_reward: 200,
@@ -274,7 +318,7 @@ function Home() {
           icon: "🚨", 
           difficulty: t('advanced'),
           duration: `50 ${t('minutes')}`,
-          unlocked: false,
+          unlocked: isAdmin ? true : false,
           completed: false,
           level_requirement: 4,
           xp_reward: 180,
@@ -415,7 +459,7 @@ function Home() {
                     }}
                   >
                     <span className="option-icon">📚</span>
-                    <span className="option-text">{t('takeCourse')}</span>
+                    <span className="option-text">Cours</span>
                   </button>
                   <button 
                     className="option-btn quiz-btn"
@@ -425,7 +469,7 @@ function Home() {
                     }}
                   >
                     <span className="option-icon">🎯</span>
-                    <span className="option-text">{t('takeQuiz')}</span>
+                    <span className="option-text">Quiz</span>
                   </button>
                 </div>
               )}

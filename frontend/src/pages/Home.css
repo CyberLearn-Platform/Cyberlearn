@@ -1,123 +1,5 @@
 /* Modern CyberForge Home Page Styling */
 
-/* 🎨 FOND ANIMÉ STYLÉ */
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-.home-page {
-  position: relative;
-  overflow: hidden;
-  min-height: 100vh;
-}
-
-.home-page::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    -45deg,
-    #0f0c29,
-    #302b63,
-    #24243e,
-    #662d8c,
-    #ed1e79,
-    #5851db,
-    #833ab4,
-    #405de6,
-    #0f0c29
-  );
-  background-size: 400% 400%;
-  animation: gradientShift 20s ease infinite;
-  z-index: -2;
-}
-
-.home-page::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(237, 30, 121, 0.4) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(88, 101, 242, 0.4) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(131, 58, 180, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 60% 60%, rgba(102, 45, 140, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 90% 30%, rgba(64, 93, 230, 0.25) 0%, transparent 50%);
-  animation: pulse 10s ease-in-out infinite;
-  z-index: -1;
-}
-
-/* Particules animées */
-@keyframes particleFloat {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.3;
-  }
-  25% {
-    transform: translate(10px, -20px) scale(1.1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(-10px, -40px) scale(0.9);
-    opacity: 0.7;
-  }
-  75% {
-    transform: translate(5px, -30px) scale(1.05);
-    opacity: 0.4;
-  }
-}
-
-.animated-particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: radial-gradient(circle, rgba(88, 101, 242, 0.8) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: particleFloat 15s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
-}
-
 :root {
   --primary-blue: #2563eb;
   --dark-blue: #1e40af;
@@ -133,9 +15,9 @@
   --surface-light: #1e293b;
   --gradient-main: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   --gradient-card: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  --glow-blue: 0 0 5px rgba(37, 99, 235, 0.15);
-  --glow-purple: 0 0 5px rgba(124, 58, 237, 0.15);
-  --glow-cyan: 0 0 5px rgba(6, 182, 212, 0.15);
+  --glow-blue: 0 0 20px rgba(37, 99, 235, 0.4);
+  --glow-purple: 0 0 20px rgba(124, 58, 237, 0.4);
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.4);
 }
 
 .home-page {
@@ -371,16 +253,16 @@
 }
 
 .module-card:hover::before {
-  opacity: 0; /* Désactivé - pas de brillance au hover */
+  opacity: 1;
 }
 
 .module-card:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.15); /* Ombre réduite */
+  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.2);
 }
 
 .module-card:hover::before {
-  opacity: 0; /* Pas de bordure lumineuse */
+  opacity: 0.6;
 }
 
 .module-card.locked {
@@ -542,19 +424,23 @@
 }
 
 .option-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 15px 25px;
-  border-radius: 12px;
-  border: 2px solid;
-  background: transparent;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 22px !important;
+  border-radius: 25px !important;
+  border: 2px solid !important;
+  background: transparent !important;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 1rem;
+  font-size: 1rem !important;
   font-weight: 600;
-  min-width: 200px;
-  justify-content: flex-start;
+  min-width: 120px !important;
+  max-height: 42px !important;
+  height: 42px !important;
+  justify-content: center !important;
+  white-space: nowrap;
+  box-sizing: border-box !important;
 }
 
 .course-btn {
@@ -582,7 +468,7 @@
 }
 
 .option-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .option-text {
